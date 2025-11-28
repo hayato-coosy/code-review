@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Comment } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Copy, Filter, Eye, EyeOff } from "lucide-react";
+import { Copy, Filter, Eye, EyeOff, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CommentSidebarProps {
@@ -26,23 +26,67 @@ export function CommentSidebar({
 }: CommentSidebarProps) {
     const [filterCategory, setFilterCategory] = useState<string>("all");
     const [filterStatus, setFilterStatus] = useState<string>("all");
-    const [showCompleted, setShowCompleted] = useState(false);
+    const [showCompleted, setShowCompleted] = useState<boolean>(true);
+    const [activeTab, setActiveTab] = useState<"desktop" | "mobile">("desktop");
 
     const filteredComments = comments.filter((c) => {
-        if (!showCompleted && c.isCompleted) return false;
+        if (!showCompleted && c.status === "completed") return false;
         if (filterCategory !== "all" && c.category !== filterCategory) return false;
         if (filterStatus !== "all" && c.status !== filterStatus) return false;
+
+        // Viewport filtering
+        const commentViewport = c.viewport || "desktop"; // Default to desktop for legacy comments
+        if (commentViewport !== activeTab) return false;
+
         return true;
     });
+
+    const completedCount = comments.filter((c) => c.status === "completed").length;
+    const pendingCount = comments.length - completedCount;
 
     const handleCopyLink = () => {
         navigator.clipboard.writeText(window.location.href);
         alert("Link copied to clipboard!");
     };
 
+    if (!isOverlayMode) return null;
+
     return (
-        <div className="flex h-full flex-col border-l bg-[#333] text-white">
-            <div className="border-b border-gray-600 p-4 space-y-2">
+        <div className="fixed right-0 top-0 z-50 flex h-full w-80 flex-col border-l bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-xl transition-transform duration-300 ease-in-out">
+            <div className="flex items-center justify-between border-b p-4">
+                <h2 className="text-lg font-semibold">コメント ({comments.length})</h2>
+                <Button variant="ghost" size="icon" onClick={onToggleOverlay}>
+                    <X className="h-4 w-4" />
+                </Button>
+            </div>
+
+            {/* Viewport Tabs */}
+            <div className="flex border-b">
+                <button
+                    className={cn(
+                        "flex-1 py-2 text-sm font-medium transition-colors",
+                        activeTab === "desktop"
+                            ? "border-b-2 border-primary text-primary"
+                            : "text-muted-foreground hover:text-foreground"
+                    )}
+                    onClick={() => setActiveTab("desktop")}
+                >
+                    PC
+                </button>
+                <button
+                    className={cn(
+                        "flex-1 py-2 text-sm font-medium transition-colors",
+                        activeTab === "mobile"
+                            ? "border-b-2 border-primary text-primary"
+                            : "text-muted-foreground hover:text-foreground"
+                    )}
+                    onClick={() => setActiveTab("mobile")}
+                >
+                    SP
+                </button>
+            </div>
+
+            <div className="border-b p-4 space-y-4">
                 <Button
                     variant="outline"
                     className="w-full gap-2 bg-[#444] text-white border-gray-600 hover:bg-[#555] hover:text-white"

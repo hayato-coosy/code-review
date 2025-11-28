@@ -238,6 +238,7 @@ export function AnnotationCanvas({
             width: tempPin.width,
             height: tempPin.height,
             isCompleted: false,
+            viewport: viewport === "mobile" ? "mobile" : "desktop",
         });
         setIsAdding(false);
         setTempPin(null);

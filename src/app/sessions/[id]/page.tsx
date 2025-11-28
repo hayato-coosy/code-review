@@ -111,7 +111,7 @@ export default function SessionPage({ params }: SessionPageProps) {
 
     const handleCommentClick = (comment: Comment) => {
         // Scroll to the comment's position
-        const scrollContainer = document.querySelector('.flex-1.overflow-hidden > div');
+        const scrollContainer = document.querySelector('.flex-1.overflow-auto');
         if (scrollContainer) {
             const scrollPosition = comment.posY * 3000; // 3000px is the iframe container height
             scrollContainer.scrollTo({
