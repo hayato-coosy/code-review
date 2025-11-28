@@ -55,7 +55,9 @@ export function CommentSidebar({
     return (
         <div className={cn(
             "flex h-full w-80 flex-col border-l border-gray-700 bg-[#333] text-white shadow-xl transition-transform duration-300 ease-in-out",
-            isOverlayMode ? "fixed right-0 top-0 z-50" : "hidden md:flex"
+            // Mobile: Fixed overlay controlled by isOverlayMode
+            // Desktop: Always relative and visible
+            isOverlayMode ? "fixed right-0 top-0 z-50 md:relative md:z-0 md:inset-auto" : "hidden md:flex"
         )}>
             <div className="flex items-center justify-between border-b border-gray-700 p-4">
                 <h2 className="text-lg font-semibold text-white">コメント ({comments.length})</h2>

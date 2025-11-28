@@ -382,7 +382,7 @@ export function AnnotationCanvas({
                     {/* Dark overlay when overlay mode is on */}
                     {isOverlayMode && (
                         <div
-                            className="absolute inset-0 w-full h-full pointer-events-none z-10"
+                            className="absolute inset-0 w-full h-full pointer-events-none z-10 md:hidden"
                             style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
                         />
                     )}
