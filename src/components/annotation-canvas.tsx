@@ -233,6 +233,12 @@ export function AnnotationCanvas({
 
     const handleSave = async () => {
         if (!tempPin) return;
+
+        // Debug: Log viewport value
+        console.log('Current viewport when saving:', viewport);
+        const targetViewport = viewport === "mobile" ? "mobile" : "desktop";
+        console.log('Saving comment with viewport:', targetViewport);
+
         await onAddComment({
             message: newComment.message,
             authorName: newComment.authorName,
@@ -243,7 +249,7 @@ export function AnnotationCanvas({
             width: tempPin.width,
             height: tempPin.height,
             isCompleted: false,
-            viewport: viewport === "mobile" ? "mobile" : "desktop",
+            viewport: targetViewport,
         });
         setIsAdding(false);
         setTempPin(null);

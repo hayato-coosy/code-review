@@ -17,7 +17,7 @@ export async function POST(
     const { id } = await params;
     try {
         const body = await request.json();
-        const { message, authorName, category, severity, posX, posY, width, height } = body;
+        const { message, authorName, category, status, posX, posY, width, height, viewport } = body;
 
         if (!message || posX === undefined || posY === undefined) {
             return NextResponse.json(
@@ -31,11 +31,12 @@ export async function POST(
             message,
             authorName,
             category,
-            severity,
+            status,
             posX,
             posY,
             width,
             height,
+            viewport,
             isCompleted: false,
         });
 
@@ -55,9 +56,9 @@ export async function PATCH(
     const { id } = await params;
     try {
         const body = await request.json();
-        const { commentId, isCompleted, posX, posY, width, height } = body;
+        const { commentId, isCompleted, posX, posY, width, height, category, status } = body;
 
-        console.log("PATCH request - Session ID:", id, "Comment ID:", commentId, "Updates:", { isCompleted, posX, posY, width, height });
+        console.log("PATCH request - Session ID:", id, "Comment ID:", commentId, "Updates:", { isCompleted, posX, posY, width, height, category, status });
 
         if (!commentId) {
             return NextResponse.json(
@@ -72,6 +73,8 @@ export async function PATCH(
         if (posY !== undefined) updates.posY = posY;
         if (width !== undefined) updates.width = width;
         if (height !== undefined) updates.height = height;
+        if (category !== undefined) updates.category = category;
+        if (status !== undefined) updates.status = status;
 
         const updated = store.comments.update(commentId, updates as Partial<Comment>);
         if (!updated) {
