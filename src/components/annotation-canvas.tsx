@@ -754,30 +754,26 @@ export function AnnotationCanvas({
                                             <select
                                                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                                                 value={newComment.category}
-                                                onChange={(e) =>
-                                                    setNewComment({ ...newComment, category: e.target.value })
-                                                }
+                                                onChange={(e) => setNewComment({ ...newComment, category: e.target.value as 'coding' | 'design' })}
                                             >
-                                                <option value="coding">🟢 コーディング</option>
-                                                <option value="design">🟠 デザイン</option>
+                                                <option value="coding">コーディング</option>
+                                                <option value="design">デザイン</option>
                                             </select>
                                             <select
                                                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                                                 value={newComment.status}
-                                                onChange={(e) =>
-                                                    setNewComment({ ...newComment, status: e.target.value })
-                                                }
+                                                onChange={(e) => setNewComment({ ...newComment, status: e.target.value as Comment['status'] })}
                                             >
-                                                <option value="pending">⚪ 未対応</option>
-                                                <option value="in-progress">🔵 対応中</option>
-                                                <option value="completed">⚫ 完了</option>
+                                                <option value="pending">未対応</option>
+                                                <option value="in-progress">対応中</option>
+                                                <option value="completed">完了</option>
                                             </select>
                                         </div>
                                         <div className="flex justify-end gap-2">
                                             <Button variant="outline" size="sm" onClick={handleCancel}>
                                                 Cancel
                                             </Button>
-                                            <Button size="sm" onClick={handleSave}>
+                                            <Button variant="default" size="sm" onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white">
                                                 Save
                                             </Button>
                                         </div>

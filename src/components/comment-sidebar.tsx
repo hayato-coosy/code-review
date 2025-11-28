@@ -185,8 +185,8 @@ export function CommentSidebar({
                             onChange={(e) => setFilterCategory(e.target.value)}
                         >
                             <option value="all">依頼先</option>
-                            <option value="coding">🟢 コーディング</option>
-                            <option value="design">🟠 デザイン</option>
+                            <option value="coding">コーディング</option>
+                            <option value="design">デザイン</option>
                         </select>
                         <select
                             className="flex h-9 w-full rounded-md border border-gray-600 bg-[#444] text-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
