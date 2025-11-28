@@ -121,9 +121,15 @@ export function CommentSidebar({
             <div className={cn("flex-1 flex flex-col w-full overflow-hidden", isCollapsed && "hidden")}>
                 <div className="flex items-center justify-between border-b border-gray-700 p-4 min-w-[320px]">
                     <h2 className="text-lg font-semibold text-white">コメント ({comments.length})</h2>
-                    {isOverlayMode && (
-                        <Button variant="ghost" size="icon" onClick={onToggleOverlay} className="text-gray-400 hover:text-white hover:bg-gray-700 md:hidden">
-                            <X className="h-4 w-4" />
+                    {onToggleOverlay && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={onToggleOverlay}
+                            className="text-gray-400 hover:text-white hover:bg-gray-700"
+                            title={isOverlayMode ? "暗転解除" : "暗転モード"}
+                        >
+                            {isOverlayMode ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                         </Button>
                     )}
                 </div>
