@@ -13,6 +13,7 @@ interface CommentSidebarProps {
     isOverlayMode?: boolean;
     onToggleOverlay?: () => void;
     onCommentClick?: (comment: Comment) => void;
+    onUpdateComment?: (commentId: string, updates: Partial<Comment>) => Promise<void>;
 }
 
 export function CommentSidebar({
@@ -20,7 +21,8 @@ export function CommentSidebar({
     onToggleComplete,
     isOverlayMode = false,
     onToggleOverlay,
-    onCommentClick
+    onCommentClick,
+    onUpdateComment
 }: CommentSidebarProps) {
     const [filterCategory, setFilterCategory] = useState<string>("all");
     const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -120,27 +122,38 @@ export function CommentSidebar({
                             onClick={() => onCommentClick?.(comment)}
                         >
                             <CardHeader className="p-3 pb-0">
-                                <div className="flex items-center justify-between">
-                                    <span className={cn(
-                                        "text-xs font-semibold px-2 py-1 rounded",
-                                        comment.category === "coding"
-                                            ? "bg-green-600 text-white"
-                                            : "bg-orange-600 text-white"
-                                    )}>
-                                        {comment.category === "coding" ? "コーディング" : "デザイン"}
-                                    </span>
-                                    <span
+                                <div className="flex items-center justify-between gap-2">
+                                    <select
                                         className={cn(
-                                            "text-xs font-bold px-2 py-1 rounded",
-                                            comment.status === "completed"
-                                                ? "bg-gray-700 text-gray-200"
-                                                : comment.status === "in-progress"
-                                                    ? "bg-blue-600 text-white"
-                                                    : "bg-gray-500 text-white"
+                                            "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1 bg-transparent",
+                                            comment.category === "coding"
+                                                ? "bg-emerald-900/30 text-emerald-300 hover:bg-emerald-900/50"
+                                                : "bg-orange-900/30 text-orange-300 hover:bg-orange-900/50"
                                         )}
+                                        value={comment.category}
+                                        onChange={(e) => onUpdateComment?.(comment.id, { category: e.target.value as any })}
+                                        onClick={(e) => e.stopPropagation()}
                                     >
-                                        {comment.status === "pending" ? "未対応" : comment.status === "in-progress" ? "対応中" : "完了"}
-                                    </span>
+                                        <option value="coding" className="bg-[#333]">コーディング</option>
+                                        <option value="design" className="bg-[#333]">デザイン</option>
+                                    </select>
+                                    <select
+                                        className={cn(
+                                            "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1 bg-transparent",
+                                            comment.status === "completed"
+                                                ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                                                : comment.status === "in-progress"
+                                                    ? "bg-sky-900/30 text-sky-300 hover:bg-sky-900/50"
+                                                    : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                                        )}
+                                        value={comment.status}
+                                        onChange={(e) => onUpdateComment?.(comment.id, { status: e.target.value as any })}
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <option value="pending" className="bg-[#333]">未対応</option>
+                                        <option value="in-progress" className="bg-[#333]">対応中</option>
+                                        <option value="completed" className="bg-[#333]">完了</option>
+                                    </select>
                                 </div>
                             </CardHeader>
                             <CardContent className="p-3 pt-2">

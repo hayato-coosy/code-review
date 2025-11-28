@@ -157,6 +157,7 @@ export default function SessionPage({ params }: SessionPageProps) {
                     isOverlayMode={isOverlayMode}
                     onToggleOverlay={() => setIsOverlayMode(!isOverlayMode)}
                     onCommentClick={handleCommentClick}
+                    onUpdateComment={handleUpdateComment}
                 />
             </div>
         </div>

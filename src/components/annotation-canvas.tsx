@@ -383,8 +383,8 @@ export function AnnotationCanvas({
                                         top: `${comment.posY * 100}%`,
                                         width: `${comment.width * 100}%`,
                                         height: `${comment.height * 100}%`,
-                                        borderColor: comment.status === "completed" ? "#6b7280" : comment.status === "in-progress" ? "#3b82f6" : "#9ca3af",
-                                        boxShadow: `0 0 0 2px rgba(255, 255, 255, 0.8), 0 0 0 4px ${comment.status === "completed" ? "#6b7280" : comment.status === "in-progress" ? "#3b82f6" : "#9ca3af"}`,
+                                        borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1",
+                                        boxShadow: `0 0 0 2px rgba(255, 255, 255, 0.8), 0 0 0 4px ${comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1"}`,
                                     }}
                                     onClick={(e) => {
                                         e.stopPropagation();
@@ -411,10 +411,10 @@ export function AnnotationCanvas({
                                                 className={cn(
                                                     "relative h-8 w-8 cursor-move transition-transform hover:scale-110",
                                                     comment.status === "completed"
-                                                        ? "text-gray-600 fill-gray-600"
+                                                        ? "text-gray-500 fill-gray-500"
                                                         : comment.status === "in-progress"
-                                                            ? "text-blue-500 fill-blue-500"
-                                                            : "text-gray-400 fill-gray-400"
+                                                            ? "text-sky-500 fill-sky-500"
+                                                            : "text-slate-400 fill-slate-400"
                                                 )}
                                             />
                                         </div>
@@ -427,7 +427,7 @@ export function AnnotationCanvas({
                                             <div
                                                 className="absolute -left-2 -top-2 w-5 h-5 bg-white border-2 cursor-nwse-resize z-10 hover:scale-125 transition-transform rounded-full"
                                                 style={{
-                                                    borderColor: comment.status === "completed" ? "#6b7280" : comment.status === "in-progress" ? "#3b82f6" : "#9ca3af",
+                                                    borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1",
                                                     boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                                                 }}
                                                 onMouseDown={(e) => {
@@ -440,7 +440,7 @@ export function AnnotationCanvas({
                                             <div
                                                 className="absolute -right-2 -top-2 w-5 h-5 bg-white border-2 cursor-nesw-resize z-10 hover:scale-125 transition-transform rounded-full"
                                                 style={{
-                                                    borderColor: comment.status === "completed" ? "#6b7280" : comment.status === "in-progress" ? "#3b82f6" : "#9ca3af",
+                                                    borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1",
                                                     boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                                                 }}
                                                 onMouseDown={(e) => {
@@ -453,7 +453,7 @@ export function AnnotationCanvas({
                                             <div
                                                 className="absolute -left-2 -bottom-2 w-5 h-5 bg-white border-2 cursor-nesw-resize z-10 hover:scale-125 transition-transform rounded-full"
                                                 style={{
-                                                    borderColor: comment.status === "completed" ? "#6b7280" : comment.status === "in-progress" ? "#3b82f6" : "#9ca3af",
+                                                    borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1",
                                                     boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                                                 }}
                                                 onMouseDown={(e) => {
@@ -466,7 +466,7 @@ export function AnnotationCanvas({
                                             <div
                                                 className="absolute -right-2 -bottom-2 w-5 h-5 bg-white border-2 cursor-nwse-resize z-10 hover:scale-125 transition-transform rounded-full"
                                                 style={{
-                                                    borderColor: comment.status === "completed" ? "#6b7280" : comment.status === "in-progress" ? "#3b82f6" : "#9ca3af",
+                                                    borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1",
                                                     boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                                                 }}
                                                 onMouseDown={(e) => {
@@ -479,28 +479,39 @@ export function AnnotationCanvas({
                                     )}
 
                                     {activePinId === comment.id && (
-                                        <div className="absolute left-0 top-full z-10 mt-2 w-72 rounded-lg border-2 bg-white p-4 shadow-2xl" style={{ borderColor: comment.status === "completed" ? "#6b7280" : comment.status === "in-progress" ? "#3b82f6" : "#9ca3af" }}>
-                                            <div className="mb-2 flex items-center justify-between">
-                                                <span className={cn(
-                                                    "text-xs font-semibold px-2 py-1 rounded",
-                                                    comment.category === "coding"
-                                                        ? "bg-green-600 text-white"
-                                                        : "bg-orange-600 text-white"
-                                                )}>
-                                                    {comment.category === "coding" ? "コーディング" : "デザイン"}
-                                                </span>
-                                                <span
+                                        <div className="absolute left-0 top-full z-10 mt-2 w-72 rounded-lg border bg-white p-4 shadow-xl" style={{ borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1" }}>
+                                            <div className="mb-3 flex items-center justify-between gap-2">
+                                                <select
                                                     className={cn(
-                                                        "text-xs font-bold px-2 py-1 rounded",
-                                                        comment.status === "completed"
-                                                            ? "bg-gray-700 text-gray-200"
-                                                            : comment.status === "in-progress"
-                                                                ? "bg-blue-600 text-white"
-                                                                : "bg-gray-500 text-white"
+                                                        "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1",
+                                                        comment.category === "coding"
+                                                            ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                                            : "bg-orange-100 text-orange-700 hover:bg-orange-200"
                                                     )}
+                                                    value={comment.category}
+                                                    onChange={(e) => onUpdateComment?.(comment.id, { category: e.target.value as any })}
+                                                    onClick={(e) => e.stopPropagation()}
                                                 >
-                                                    {comment.status === "pending" ? "未対応" : comment.status === "in-progress" ? "対応中" : "完了"}
-                                                </span>
+                                                    <option value="coding">コーディング</option>
+                                                    <option value="design">デザイン</option>
+                                                </select>
+                                                <select
+                                                    className={cn(
+                                                        "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1",
+                                                        comment.status === "completed"
+                                                            ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                                            : comment.status === "in-progress"
+                                                                ? "bg-sky-100 text-sky-700 hover:bg-sky-200"
+                                                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                                    )}
+                                                    value={comment.status}
+                                                    onChange={(e) => onUpdateComment?.(comment.id, { status: e.target.value as any })}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <option value="pending">未対応</option>
+                                                    <option value="in-progress">対応中</option>
+                                                    <option value="completed">完了</option>
+                                                </select>
                                             </div>
                                             <p className="text-base font-medium text-gray-900 mb-2">{comment.message}</p>
                                             {comment.authorName && (
@@ -544,36 +555,47 @@ export function AnnotationCanvas({
                                             className={cn(
                                                 "absolute inset-0 h-10 w-10 transition-transform hover:scale-110 pointer-events-none",
                                                 comment.status === "completed"
-                                                    ? "text-gray-600 fill-gray-600"
+                                                    ? "text-gray-500 fill-gray-500"
                                                     : comment.status === "in-progress"
-                                                        ? "text-blue-500 fill-blue-500"
-                                                        : "text-gray-400 fill-gray-400"
+                                                        ? "text-sky-500 fill-sky-500"
+                                                        : "text-slate-400 fill-slate-400"
                                             )}
                                         />
                                     </div>
                                     {activePinId === comment.id && (
-                                        <div className="absolute left-1/2 top-full z-10 mt-2 w-72 -translate-x-1/2 rounded-lg border-2 bg-white p-4 shadow-2xl" style={{ borderColor: comment.status === "completed" ? "#6b7280" : comment.status === "in-progress" ? "#3b82f6" : "#9ca3af" }}>
-                                            <div className="mb-2 flex items-center justify-between">
-                                                <span className={cn(
-                                                    "text-xs font-semibold px-2 py-1 rounded",
-                                                    comment.category === "coding"
-                                                        ? "bg-green-600 text-white"
-                                                        : "bg-orange-600 text-white"
-                                                )}>
-                                                    {comment.category === "coding" ? "コーディング" : "デザイン"}
-                                                </span>
-                                                <span
+                                        <div className="absolute left-1/2 top-full z-10 mt-2 w-72 -translate-x-1/2 rounded-lg border bg-white p-4 shadow-xl" style={{ borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1" }}>
+                                            <div className="mb-3 flex items-center justify-between gap-2">
+                                                <select
                                                     className={cn(
-                                                        "text-xs font-bold px-2 py-1 rounded",
-                                                        comment.status === "completed"
-                                                            ? "bg-gray-700 text-gray-200"
-                                                            : comment.status === "in-progress"
-                                                                ? "bg-blue-600 text-white"
-                                                                : "bg-gray-500 text-white"
+                                                        "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1",
+                                                        comment.category === "coding"
+                                                            ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                                            : "bg-orange-100 text-orange-700 hover:bg-orange-200"
                                                     )}
+                                                    value={comment.category}
+                                                    onChange={(e) => onUpdateComment?.(comment.id, { category: e.target.value as any })}
+                                                    onClick={(e) => e.stopPropagation()}
                                                 >
-                                                    {comment.status === "pending" ? "未対応" : comment.status === "in-progress" ? "対応中" : "完了"}
-                                                </span>
+                                                    <option value="coding">コーディング</option>
+                                                    <option value="design">デザイン</option>
+                                                </select>
+                                                <select
+                                                    className={cn(
+                                                        "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1",
+                                                        comment.status === "completed"
+                                                            ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                                            : comment.status === "in-progress"
+                                                                ? "bg-sky-100 text-sky-700 hover:bg-sky-200"
+                                                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                                    )}
+                                                    value={comment.status}
+                                                    onChange={(e) => onUpdateComment?.(comment.id, { status: e.target.value as any })}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <option value="pending">未対応</option>
+                                                    <option value="in-progress">対応中</option>
+                                                    <option value="completed">完了</option>
+                                                </select>
                                             </div>
                                             <p className="text-base font-medium text-gray-900 mb-2">{comment.message}</p>
                                             {comment.authorName && (
