@@ -271,7 +271,8 @@ export function AnnotationCanvas({
 
     // Filter out completed comments and comments not matching current viewport
     const visibleComments = comments.filter((c) => {
-        if (c.isCompleted) return false;
+        // Hide completed tasks
+        if (c.status === "completed") return false;
 
         const commentViewport = c.viewport || "desktop";
         const currentViewport = viewport === "mobile" ? "mobile" : "desktop";
@@ -364,7 +365,7 @@ export function AnnotationCanvas({
                             title="Mobile (375px)"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2" /><path d="M12 18h.01" /></svg>
-                            SP
+                            SP <span className="opacity-70">(375px)</span>
                         </Button>
                         <Button
                             variant={viewport === "desktop" ? "default" : "ghost"}
@@ -374,8 +375,9 @@ export function AnnotationCanvas({
                             title="Desktop (1280px)"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="3" rx="2" /><line x1="8" x2="16" y1="21" y2="21" /><line x1="12" x2="12" y1="17" y2="21" /></svg>
-                            PC
+                            PC <span className="opacity-70">(1280px)</span>
                         </Button>
+
 
                     </div>
                 </div>
