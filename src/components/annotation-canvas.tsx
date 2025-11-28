@@ -271,8 +271,8 @@ export function AnnotationCanvas({
 
     // Filter out completed comments and comments not matching current viewport
     const visibleComments = comments.filter((c) => {
-        // Hide completed tasks
-        if (c.status === "completed") return false;
+        // Hide completed tasks (check both status and isCompleted for backward compatibility)
+        if (c.status === "completed" || c.isCompleted) return false;
 
         const commentViewport = c.viewport || "desktop";
         const currentViewport = viewport === "mobile" ? "mobile" : "desktop";

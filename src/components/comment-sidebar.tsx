@@ -63,7 +63,8 @@ export function CommentSidebar({
     };
 
     const filteredComments = comments.filter((c) => {
-        if (!showCompleted && c.status === "completed") return false;
+        // Hide completed tasks (check both status and isCompleted for backward compatibility)
+        if (!showCompleted && (c.status === "completed" || c.isCompleted)) return false;
         if (filterCategory !== "all" && c.category !== filterCategory) return false;
         if (filterStatus !== "all" && c.status !== filterStatus) return false;
 
@@ -183,7 +184,7 @@ export function CommentSidebar({
                             value={filterCategory}
                             onChange={(e) => setFilterCategory(e.target.value)}
                         >
-                            <option value="all">依頼者</option>
+                            <option value="all">依頼先</option>
                             <option value="coding">🟢 コーディング</option>
                             <option value="design">🟠 デザイン</option>
                         </select>
@@ -193,9 +194,9 @@ export function CommentSidebar({
                             onChange={(e) => setFilterStatus(e.target.value)}
                         >
                             <option value="all">対応状況</option>
-                            <option value="pending">⚪ 未対応</option>
-                            <option value="in-progress">🔵 対応中</option>
-                            <option value="completed">⚫ 完了</option>
+                            <option value="pending">未対応</option>
+                            <option value="in-progress">対応中</option>
+                            <option value="completed">完了</option>
                         </select>
                     </div>
                     <label className="flex items-center gap-2 text-sm text-gray-200">
