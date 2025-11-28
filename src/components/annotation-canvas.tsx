@@ -17,6 +17,8 @@ interface AnnotationCanvasProps {
     isOverlayMode?: boolean;
     activeCommentId?: string | null;
     onSetActiveComment?: (commentId: string | null) => void;
+    viewport?: "responsive" | "desktop" | "mobile";
+    onViewportChange?: (viewport: "responsive" | "desktop" | "mobile") => void;
 }
 
 export function AnnotationCanvas({
@@ -27,6 +29,8 @@ export function AnnotationCanvas({
     isOverlayMode = false,
     activeCommentId = null,
     onSetActiveComment,
+    viewport = "responsive",
+    onViewportChange,
 }: AnnotationCanvasProps) {
     const [isPinMode, setIsPinMode] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
@@ -52,7 +56,6 @@ export function AnnotationCanvas({
     const [resizingCommentId, setResizingCommentId] = useState<string | null>(null);
     const [resizeHandle, setResizeHandle] = useState<'tl' | 'tr' | 'bl' | 'br' | null>(null);
     const [resizeStart, setResizeStart] = useState<{ x: number; y: number; origPosX: number; origPosY: number; origWidth: number; origHeight: number } | null>(null);
-    const [viewport, setViewport] = useState<"responsive" | "desktop" | "mobile">("responsive");
 
     const handleOverlayMouseDown = (e: MouseEvent<HTMLDivElement>) => {
         if (!isPinMode) return;
@@ -329,7 +332,7 @@ export function AnnotationCanvas({
                     <Button
                         variant={viewport === "mobile" ? "default" : "ghost"}
                         size="sm"
-                        onClick={() => setViewport("mobile")}
+                        onClick={() => onViewportChange?.("mobile")}
                         className="h-7 px-3 text-xs gap-2"
                         title="Mobile (375px)"
                     >
@@ -339,7 +342,7 @@ export function AnnotationCanvas({
                     <Button
                         variant={viewport === "desktop" ? "default" : "ghost"}
                         size="sm"
-                        onClick={() => setViewport("desktop")}
+                        onClick={() => onViewportChange?.("desktop")}
                         className="h-7 px-3 text-xs gap-2"
                         title="Desktop (1280px)"
                     >
@@ -349,7 +352,7 @@ export function AnnotationCanvas({
                     <Button
                         variant={viewport === "responsive" ? "default" : "ghost"}
                         size="sm"
-                        onClick={() => setViewport("responsive")}
+                        onClick={() => onViewportChange?.("responsive")}
                         className="h-7 px-3 text-xs gap-2"
                         title="Responsive (100%)"
                     >

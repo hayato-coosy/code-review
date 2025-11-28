@@ -124,6 +124,15 @@ export default function SessionPage({ params }: SessionPageProps) {
         setActiveCommentId(comment.id);
     };
 
+    const [viewport, setViewport] = useState<"responsive" | "desktop" | "mobile">("responsive");
+
+    // Map viewport to sidebar tab (responsive -> desktop)
+    const activeTab = viewport === "mobile" ? "mobile" : "desktop";
+
+    const handleTabChange = (tab: "desktop" | "mobile") => {
+        setViewport(tab);
+    };
+
     if (isLoading) {
         return (
             <div className="flex h-screen items-center justify-center">
@@ -147,10 +156,12 @@ export default function SessionPage({ params }: SessionPageProps) {
                     isOverlayMode={isOverlayMode}
                     activeCommentId={activeCommentId}
                     onSetActiveComment={setActiveCommentId}
+                    viewport={viewport}
+                    onViewportChange={setViewport}
                 />
             </div>
 
-            <div className="w-96">
+            <div className="relative">
                 <CommentSidebar
                     comments={comments}
                     onToggleComplete={handleToggleComplete}
@@ -158,6 +169,8 @@ export default function SessionPage({ params }: SessionPageProps) {
                     onToggleOverlay={() => setIsOverlayMode(!isOverlayMode)}
                     onCommentClick={handleCommentClick}
                     onUpdateComment={handleUpdateComment}
+                    activeTab={activeTab}
+                    onTabChange={handleTabChange}
                 />
             </div>
         </div>

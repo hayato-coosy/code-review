@@ -14,6 +14,8 @@ interface CommentSidebarProps {
     onToggleOverlay?: () => void;
     onCommentClick?: (comment: Comment) => void;
     onUpdateComment?: (commentId: string, updates: Partial<Comment>) => Promise<void>;
+    activeTab?: "desktop" | "mobile";
+    onTabChange?: (tab: "desktop" | "mobile") => void;
 }
 
 export function CommentSidebar({
@@ -22,12 +24,13 @@ export function CommentSidebar({
     isOverlayMode = false,
     onToggleOverlay,
     onCommentClick,
-    onUpdateComment
+    onUpdateComment,
+    activeTab = "desktop",
+    onTabChange
 }: CommentSidebarProps) {
     const [filterCategory, setFilterCategory] = useState<string>("all");
     const [filterStatus, setFilterStatus] = useState<string>("all");
     const [showCompleted, setShowCompleted] = useState<boolean>(true);
-    const [activeTab, setActiveTab] = useState<"desktop" | "mobile">("desktop");
 
     const filteredComments = comments.filter((c) => {
         if (!showCompleted && c.status === "completed") return false;
@@ -49,27 +52,30 @@ export function CommentSidebar({
         alert("Link copied to clipboard!");
     };
 
-    if (!isOverlayMode) return null;
-
     return (
-        <div className="fixed right-0 top-0 z-50 flex h-full w-80 flex-col border-l bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-xl transition-transform duration-300 ease-in-out">
-            <div className="flex items-center justify-between border-b p-4">
-                <h2 className="text-lg font-semibold">コメント ({comments.length})</h2>
-                <Button variant="ghost" size="icon" onClick={onToggleOverlay}>
-                    <X className="h-4 w-4" />
-                </Button>
+        <div className={cn(
+            "flex h-full w-80 flex-col border-l border-gray-700 bg-[#333] text-white shadow-xl transition-transform duration-300 ease-in-out",
+            isOverlayMode ? "fixed right-0 top-0 z-50" : "hidden md:flex"
+        )}>
+            <div className="flex items-center justify-between border-b border-gray-700 p-4">
+                <h2 className="text-lg font-semibold text-white">コメント ({comments.length})</h2>
+                {isOverlayMode && (
+                    <Button variant="ghost" size="icon" onClick={onToggleOverlay} className="text-gray-400 hover:text-white hover:bg-gray-700">
+                        <X className="h-4 w-4" />
+                    </Button>
+                )}
             </div>
 
             {/* Viewport Tabs */}
-            <div className="flex border-b">
+            <div className="flex border-b border-gray-700">
                 <button
                     className={cn(
                         "flex-1 py-2 text-sm font-medium transition-colors",
                         activeTab === "desktop"
-                            ? "border-b-2 border-primary text-primary"
-                            : "text-muted-foreground hover:text-foreground"
+                            ? "border-b-2 border-blue-500 text-blue-400 bg-[#444]"
+                            : "text-gray-400 hover:text-white hover:bg-[#444]"
                     )}
-                    onClick={() => setActiveTab("desktop")}
+                    onClick={() => onTabChange?.("desktop")}
                 >
                     PC
                 </button>
@@ -77,16 +83,16 @@ export function CommentSidebar({
                     className={cn(
                         "flex-1 py-2 text-sm font-medium transition-colors",
                         activeTab === "mobile"
-                            ? "border-b-2 border-primary text-primary"
-                            : "text-muted-foreground hover:text-foreground"
+                            ? "border-b-2 border-blue-500 text-blue-400 bg-[#444]"
+                            : "text-gray-400 hover:text-white hover:bg-[#444]"
                     )}
-                    onClick={() => setActiveTab("mobile")}
+                    onClick={() => onTabChange?.("mobile")}
                 >
                     SP
                 </button>
             </div>
 
-            <div className="border-b p-4 space-y-4">
+            <div className="border-b border-gray-700 p-4 space-y-4">
                 <Button
                     variant="outline"
                     className="w-full gap-2 bg-[#444] text-white border-gray-600 hover:bg-[#555] hover:text-white"
