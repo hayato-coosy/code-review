@@ -9,8 +9,8 @@ export type Comment = {
     sessionId: string;
     message: string;
     authorName?: string;
-    category: "layout" | "text" | "ui" | "bug" | "idea" | "other";
-    severity: "INFO" | "MINOR" | "MAJOR";
+    category: "coding" | "design";
+    status: "pending" | "in-progress" | "completed";
     posX: number; // 0-1 relative X
     posY: number; // 0-1 relative Y
     width?: number; // 0-1 relative width (for area selection)

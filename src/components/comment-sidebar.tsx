@@ -23,13 +23,13 @@ export function CommentSidebar({
     onCommentClick
 }: CommentSidebarProps) {
     const [filterCategory, setFilterCategory] = useState<string>("all");
-    const [filterSeverity, setFilterSeverity] = useState<string>("all");
+    const [filterStatus, setFilterStatus] = useState<string>("all");
     const [showCompleted, setShowCompleted] = useState(false);
 
     const filteredComments = comments.filter((c) => {
         if (!showCompleted && c.isCompleted) return false;
         if (filterCategory !== "all" && c.category !== filterCategory) return false;
-        if (filterSeverity !== "all" && c.severity !== filterSeverity) return false;
+        if (filterStatus !== "all" && c.status !== filterStatus) return false;
         return true;
     });
 
@@ -78,23 +78,19 @@ export function CommentSidebar({
                         value={filterCategory}
                         onChange={(e) => setFilterCategory(e.target.value)}
                     >
-                        <option value="all">All Categories</option>
-                        <option value="layout">Layout</option>
-                        <option value="text">Text</option>
-                        <option value="ui">UI</option>
-                        <option value="bug">Bug</option>
-                        <option value="idea">Idea</option>
-                        <option value="other">Other</option>
+                        <option value="all">すべてのカテゴリ</option>
+                        <option value="coding">🟢 コーディング</option>
+                        <option value="design">🟠 デザイン</option>
                     </select>
                     <select
                         className="flex h-9 w-full rounded-md border border-gray-600 bg-[#444] text-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
-                        value={filterSeverity}
-                        onChange={(e) => setFilterSeverity(e.target.value)}
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
                     >
-                        <option value="all">All Severities</option>
-                        <option value="INFO">Info</option>
-                        <option value="MINOR">Minor</option>
-                        <option value="MAJOR">Major</option>
+                        <option value="all">すべてのステータス</option>
+                        <option value="pending">⚪ 未対応</option>
+                        <option value="in-progress">🔵 対応中</option>
+                        <option value="completed">⚫ 完了</option>
                     </select>
                 </div>
                 <label className="flex items-center gap-2 text-sm text-gray-200">
@@ -125,20 +121,25 @@ export function CommentSidebar({
                         >
                             <CardHeader className="p-3 pb-0">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-xs font-semibold uppercase text-gray-300">
-                                        {comment.category}
+                                    <span className={cn(
+                                        "text-xs font-semibold px-2 py-1 rounded",
+                                        comment.category === "coding"
+                                            ? "bg-green-600 text-white"
+                                            : "bg-orange-600 text-white"
+                                    )}>
+                                        {comment.category === "coding" ? "コーディング" : "デザイン"}
                                     </span>
                                     <span
                                         className={cn(
-                                            "text-xs font-bold",
-                                            comment.severity === "MAJOR"
-                                                ? "text-red-400"
-                                                : comment.severity === "MINOR"
-                                                    ? "text-yellow-400"
-                                                    : "text-blue-400"
+                                            "text-xs font-bold px-2 py-1 rounded",
+                                            comment.status === "completed"
+                                                ? "bg-gray-700 text-gray-200"
+                                                : comment.status === "in-progress"
+                                                    ? "bg-blue-600 text-white"
+                                                    : "bg-gray-500 text-white"
                                         )}
                                     >
-                                        {comment.severity}
+                                        {comment.status === "pending" ? "未対応" : comment.status === "in-progress" ? "対応中" : "完了"}
                                     </span>
                                 </div>
                             </CardHeader>

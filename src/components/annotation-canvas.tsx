@@ -37,8 +37,8 @@ export function AnnotationCanvas({
     const [newComment, setNewComment] = useState({
         message: "",
         authorName: "",
-        category: "other",
-        severity: "INFO",
+        category: "coding",
+        status: "pending",
     });
     const [localActivePinId, setLocalActivePinId] = useState<string | null>(null);
     const activePinId = activeCommentId !== undefined ? activeCommentId : localActivePinId;
@@ -231,7 +231,7 @@ export function AnnotationCanvas({
             message: newComment.message,
             authorName: newComment.authorName,
             category: newComment.category as Comment["category"],
-            severity: newComment.severity as Comment["severity"],
+            status: newComment.status as Comment["status"],
             posX: tempPin.x,
             posY: tempPin.y,
             width: tempPin.width,
@@ -243,8 +243,8 @@ export function AnnotationCanvas({
         setNewComment({
             message: "",
             authorName: "",
-            category: "other",
-            severity: "INFO",
+            category: "coding",
+            status: "pending",
         });
     };
 
@@ -383,8 +383,8 @@ export function AnnotationCanvas({
                                         top: `${comment.posY * 100}%`,
                                         width: `${comment.width * 100}%`,
                                         height: `${comment.height * 100}%`,
-                                        borderColor: comment.severity === "MAJOR" ? "#ef4444" : comment.severity === "MINOR" ? "#eab308" : "#3b82f6",
-                                        boxShadow: `0 0 0 2px rgba(255, 255, 255, 0.8), 0 0 0 4px ${comment.severity === "MAJOR" ? "#ef4444" : comment.severity === "MINOR" ? "#eab308" : "#3b82f6"}`,
+                                        borderColor: comment.status === "completed" ? "#6b7280" : comment.status === "in-progress" ? "#3b82f6" : "#9ca3af",
+                                        boxShadow: `0 0 0 2px rgba(255, 255, 255, 0.8), 0 0 0 4px ${comment.status === "completed" ? "#6b7280" : comment.status === "in-progress" ? "#3b82f6" : "#9ca3af"}`,
                                     }}
                                     onClick={(e) => {
                                         e.stopPropagation();
@@ -410,11 +410,11 @@ export function AnnotationCanvas({
                                             <MapPin
                                                 className={cn(
                                                     "relative h-8 w-8 cursor-move transition-transform hover:scale-110",
-                                                    comment.severity === "MAJOR"
-                                                        ? "text-red-500 fill-red-500"
-                                                        : comment.severity === "MINOR"
-                                                            ? "text-yellow-500 fill-yellow-500"
-                                                            : "text-blue-500 fill-blue-500"
+                                                    comment.status === "completed"
+                                                        ? "text-gray-600 fill-gray-600"
+                                                        : comment.status === "in-progress"
+                                                            ? "text-blue-500 fill-blue-500"
+                                                            : "text-gray-400 fill-gray-400"
                                                 )}
                                             />
                                         </div>
@@ -427,7 +427,7 @@ export function AnnotationCanvas({
                                             <div
                                                 className="absolute -left-2 -top-2 w-5 h-5 bg-white border-2 cursor-nwse-resize z-10 hover:scale-125 transition-transform rounded-full"
                                                 style={{
-                                                    borderColor: comment.severity === "MAJOR" ? "#ef4444" : comment.severity === "MINOR" ? "#eab308" : "#3b82f6",
+                                                    borderColor: comment.status === "completed" ? "#6b7280" : comment.status === "in-progress" ? "#3b82f6" : "#9ca3af",
                                                     boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                                                 }}
                                                 onMouseDown={(e) => {
@@ -440,7 +440,7 @@ export function AnnotationCanvas({
                                             <div
                                                 className="absolute -right-2 -top-2 w-5 h-5 bg-white border-2 cursor-nesw-resize z-10 hover:scale-125 transition-transform rounded-full"
                                                 style={{
-                                                    borderColor: comment.severity === "MAJOR" ? "#ef4444" : comment.severity === "MINOR" ? "#eab308" : "#3b82f6",
+                                                    borderColor: comment.status === "completed" ? "#6b7280" : comment.status === "in-progress" ? "#3b82f6" : "#9ca3af",
                                                     boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                                                 }}
                                                 onMouseDown={(e) => {
@@ -453,7 +453,7 @@ export function AnnotationCanvas({
                                             <div
                                                 className="absolute -left-2 -bottom-2 w-5 h-5 bg-white border-2 cursor-nesw-resize z-10 hover:scale-125 transition-transform rounded-full"
                                                 style={{
-                                                    borderColor: comment.severity === "MAJOR" ? "#ef4444" : comment.severity === "MINOR" ? "#eab308" : "#3b82f6",
+                                                    borderColor: comment.status === "completed" ? "#6b7280" : comment.status === "in-progress" ? "#3b82f6" : "#9ca3af",
                                                     boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                                                 }}
                                                 onMouseDown={(e) => {
@@ -466,7 +466,7 @@ export function AnnotationCanvas({
                                             <div
                                                 className="absolute -right-2 -bottom-2 w-5 h-5 bg-white border-2 cursor-nwse-resize z-10 hover:scale-125 transition-transform rounded-full"
                                                 style={{
-                                                    borderColor: comment.severity === "MAJOR" ? "#ef4444" : comment.severity === "MINOR" ? "#eab308" : "#3b82f6",
+                                                    borderColor: comment.status === "completed" ? "#6b7280" : comment.status === "in-progress" ? "#3b82f6" : "#9ca3af",
                                                     boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                                                 }}
                                                 onMouseDown={(e) => {
@@ -479,25 +479,27 @@ export function AnnotationCanvas({
                                     )}
 
                                     {activePinId === comment.id && (
-                                        <div className="absolute left-0 top-full z-10 mt-2 w-72 rounded-lg border-2 bg-white p-4 shadow-2xl" style={{ borderColor: comment.severity === "MAJOR" ? "#ef4444" : comment.severity === "MINOR" ? "#eab308" : "#3b82f6" }}>
+                                        <div className="absolute left-0 top-full z-10 mt-2 w-72 rounded-lg border-2 bg-white p-4 shadow-2xl" style={{ borderColor: comment.status === "completed" ? "#6b7280" : comment.status === "in-progress" ? "#3b82f6" : "#9ca3af" }}>
                                             <div className="mb-2 flex items-center justify-between">
-                                                <span className="text-xs font-bold uppercase px-2 py-1 rounded" style={{
-                                                    backgroundColor: comment.severity === "MAJOR" ? "#fee2e2" : comment.severity === "MINOR" ? "#fef3c7" : "#dbeafe",
-                                                    color: comment.severity === "MAJOR" ? "#991b1b" : comment.severity === "MINOR" ? "#78350f" : "#1e3a8a"
-                                                }}>
-                                                    {comment.category}
+                                                <span className={cn(
+                                                    "text-xs font-semibold px-2 py-1 rounded",
+                                                    comment.category === "coding"
+                                                        ? "bg-green-600 text-white"
+                                                        : "bg-orange-600 text-white"
+                                                )}>
+                                                    {comment.category === "coding" ? "コーディング" : "デザイン"}
                                                 </span>
                                                 <span
                                                     className={cn(
-                                                        "text-sm font-bold px-2 py-1 rounded",
-                                                        comment.severity === "MAJOR"
-                                                            ? "bg-red-100 text-red-800"
-                                                            : comment.severity === "MINOR"
-                                                                ? "bg-yellow-100 text-yellow-800"
-                                                                : "bg-blue-100 text-blue-800"
+                                                        "text-xs font-bold px-2 py-1 rounded",
+                                                        comment.status === "completed"
+                                                            ? "bg-gray-700 text-gray-200"
+                                                            : comment.status === "in-progress"
+                                                                ? "bg-blue-600 text-white"
+                                                                : "bg-gray-500 text-white"
                                                     )}
                                                 >
-                                                    {comment.severity}
+                                                    {comment.status === "pending" ? "未対応" : comment.status === "in-progress" ? "対応中" : "完了"}
                                                 </span>
                                             </div>
                                             <p className="text-base font-medium text-gray-900 mb-2">{comment.message}</p>
@@ -541,34 +543,36 @@ export function AnnotationCanvas({
                                         <MapPin
                                             className={cn(
                                                 "absolute inset-0 h-10 w-10 transition-transform hover:scale-110 pointer-events-none",
-                                                comment.severity === "MAJOR"
-                                                    ? "text-red-500 fill-red-500"
-                                                    : comment.severity === "MINOR"
-                                                        ? "text-yellow-500 fill-yellow-500"
-                                                        : "text-blue-500 fill-blue-500"
+                                                comment.status === "completed"
+                                                    ? "text-gray-600 fill-gray-600"
+                                                    : comment.status === "in-progress"
+                                                        ? "text-blue-500 fill-blue-500"
+                                                        : "text-gray-400 fill-gray-400"
                                             )}
                                         />
                                     </div>
                                     {activePinId === comment.id && (
-                                        <div className="absolute left-1/2 top-full z-10 mt-2 w-72 -translate-x-1/2 rounded-lg border-2 bg-white p-4 shadow-2xl" style={{ borderColor: comment.severity === "MAJOR" ? "#ef4444" : comment.severity === "MINOR" ? "#eab308" : "#3b82f6" }}>
+                                        <div className="absolute left-1/2 top-full z-10 mt-2 w-72 -translate-x-1/2 rounded-lg border-2 bg-white p-4 shadow-2xl" style={{ borderColor: comment.status === "completed" ? "#6b7280" : comment.status === "in-progress" ? "#3b82f6" : "#9ca3af" }}>
                                             <div className="mb-2 flex items-center justify-between">
-                                                <span className="text-xs font-bold uppercase px-2 py-1 rounded" style={{
-                                                    backgroundColor: comment.severity === "MAJOR" ? "#fee2e2" : comment.severity === "MINOR" ? "#fef3c7" : "#dbeafe",
-                                                    color: comment.severity === "MAJOR" ? "#991b1b" : comment.severity === "MINOR" ? "#78350f" : "#1e3a8a"
-                                                }}>
-                                                    {comment.category}
+                                                <span className={cn(
+                                                    "text-xs font-semibold px-2 py-1 rounded",
+                                                    comment.category === "coding"
+                                                        ? "bg-green-600 text-white"
+                                                        : "bg-orange-600 text-white"
+                                                )}>
+                                                    {comment.category === "coding" ? "コーディング" : "デザイン"}
                                                 </span>
                                                 <span
                                                     className={cn(
-                                                        "text-sm font-bold px-2 py-1 rounded",
-                                                        comment.severity === "MAJOR"
-                                                            ? "bg-red-100 text-red-800"
-                                                            : comment.severity === "MINOR"
-                                                                ? "bg-yellow-100 text-yellow-800"
-                                                                : "bg-blue-100 text-blue-800"
+                                                        "text-xs font-bold px-2 py-1 rounded",
+                                                        comment.status === "completed"
+                                                            ? "bg-gray-700 text-gray-200"
+                                                            : comment.status === "in-progress"
+                                                                ? "bg-blue-600 text-white"
+                                                                : "bg-gray-500 text-white"
                                                     )}
                                                 >
-                                                    {comment.severity}
+                                                    {comment.status === "pending" ? "未対応" : comment.status === "in-progress" ? "対応中" : "完了"}
                                                 </span>
                                             </div>
                                             <p className="text-base font-medium text-gray-900 mb-2">{comment.message}</p>
@@ -654,23 +658,19 @@ export function AnnotationCanvas({
                                                 setNewComment({ ...newComment, category: e.target.value })
                                             }
                                         >
-                                            <option value="layout">Layout</option>
-                                            <option value="text">Text</option>
-                                            <option value="ui">UI</option>
-                                            <option value="bug">Bug</option>
-                                            <option value="idea">Idea</option>
-                                            <option value="other">Other</option>
+                                            <option value="coding">🟢 コーディング</option>
+                                            <option value="design">🟠 デザイン</option>
                                         </select>
                                         <select
                                             className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                            value={newComment.severity}
+                                            value={newComment.status}
                                             onChange={(e) =>
-                                                setNewComment({ ...newComment, severity: e.target.value })
+                                                setNewComment({ ...newComment, status: e.target.value })
                                             }
                                         >
-                                            <option value="INFO">Info</option>
-                                            <option value="MINOR">Minor</option>
-                                            <option value="MAJOR">Major</option>
+                                            <option value="pending">⚪ 未対応</option>
+                                            <option value="in-progress">🔵 対応中</option>
+                                            <option value="completed">⚫ 完了</option>
                                         </select>
                                     </div>
                                     <div className="flex justify-end gap-2">
