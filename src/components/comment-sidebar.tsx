@@ -47,7 +47,8 @@ export function CommentSidebar({
 
         const handleMouseMove = (moveEvent: MouseEvent) => {
             const deltaX = startX - moveEvent.clientX;
-            const newWidth = Math.max(250, Math.min(600, startWidth + deltaX));
+            // Min width 320px to prevent layout breakage
+            const newWidth = Math.max(320, Math.min(600, startWidth + deltaX));
             setWidth(newWidth);
         };
 
@@ -86,8 +87,8 @@ export function CommentSidebar({
             className={cn(
                 "flex h-full flex-col border-l border-gray-700 bg-[#333] text-white shadow-xl transition-all duration-300 ease-in-out relative",
                 // Mobile: Fixed overlay
-                // Desktop: Always relative
-                "fixed right-0 top-0 z-50 md:relative md:z-0 md:inset-auto",
+                // Desktop: Always relative, but with higher z-index to ensure button is clickable
+                "fixed right-0 top-0 z-50 md:relative md:z-20 md:inset-auto",
                 // Mobile: Show only when overlay mode is on
                 // Desktop: Always show
                 !isOverlayMode && "hidden md:flex",

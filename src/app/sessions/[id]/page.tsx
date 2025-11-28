@@ -162,7 +162,7 @@ export default function SessionPage({ params }: SessionPageProps) {
                 />
             </div>
 
-            <div className="relative">
+            <div className="relative z-20">
                 <CommentSidebar
                     comments={comments}
                     onToggleComplete={handleToggleComplete}
