@@ -4,7 +4,7 @@ import { useState, useRef, MouseEvent } from "react";
 import { Comment } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MapPin, X, PlusCircle } from "lucide-react";
+import { MapPin, X, PlusCircle, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AnnotationCanvasProps {
@@ -17,8 +17,9 @@ interface AnnotationCanvasProps {
     isOverlayMode?: boolean;
     activeCommentId?: string | null;
     onSetActiveComment?: (commentId: string | null) => void;
-    viewport?: "responsive" | "desktop" | "mobile";
-    onViewportChange?: (viewport: "responsive" | "desktop" | "mobile") => void;
+    viewport?: "desktop" | "mobile";
+    onViewportChange?: (viewport: "desktop" | "mobile") => void;
+    onToggleOverlay?: () => void;
 }
 
 export function AnnotationCanvas({
@@ -29,8 +30,9 @@ export function AnnotationCanvas({
     isOverlayMode = false,
     activeCommentId = null,
     onSetActiveComment,
-    viewport = "responsive",
+    viewport = "desktop",
     onViewportChange,
+    onToggleOverlay,
 }: AnnotationCanvasProps) {
     const [isPinMode, setIsPinMode] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
@@ -261,8 +263,15 @@ export function AnnotationCanvas({
         setDragEnd(null);
     };
 
-    // Filter out completed comments
-    const visibleComments = comments.filter((c) => !c.isCompleted);
+    // Filter out completed comments and comments not matching current viewport
+    const visibleComments = comments.filter((c) => {
+        if (c.isCompleted) return false;
+
+        const commentViewport = c.viewport || "desktop";
+        const currentViewport = viewport === "mobile" ? "mobile" : "desktop";
+
+        return commentViewport === currentViewport;
+    });
 
     // Calculate modal position to avoid overlap with sidebar and selected area
     const getModalPosition = (comment: typeof tempPin) => {
@@ -328,37 +337,41 @@ export function AnnotationCanvas({
                     </span>
                 </div>
 
-                <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
+                <div className="flex items-center gap-2">
                     <Button
-                        variant={viewport === "mobile" ? "default" : "ghost"}
+                        variant={isOverlayMode ? "default" : "outline"}
                         size="sm"
-                        onClick={() => onViewportChange?.("mobile")}
-                        className="h-7 px-3 text-xs gap-2"
-                        title="Mobile (375px)"
+                        onClick={onToggleOverlay}
+                        className="gap-2 hidden" // Hidden as per request
+                        title="Toggle Dark Overlay"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2" /><path d="M12 18h.01" /></svg>
-                        SP
+                        {isOverlayMode ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                        <span className="hidden sm:inline">{isOverlayMode ? "暗転: ON" : "暗転: OFF"}</span>
                     </Button>
-                    <Button
-                        variant={viewport === "desktop" ? "default" : "ghost"}
-                        size="sm"
-                        onClick={() => onViewportChange?.("desktop")}
-                        className="h-7 px-3 text-xs gap-2"
-                        title="Desktop (1280px)"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="3" rx="2" /><line x1="8" x2="16" y1="21" y2="21" /><line x1="12" x2="12" y1="17" y2="21" /></svg>
-                        PC
-                    </Button>
-                    <Button
-                        variant={viewport === "responsive" ? "default" : "ghost"}
-                        size="sm"
-                        onClick={() => onViewportChange?.("responsive")}
-                        className="h-7 px-3 text-xs gap-2"
-                        title="Responsive (100%)"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5z" /><path d="M9 2v20" /><path d="M15 2v20" /></svg>
-                        Full
-                    </Button>
+
+                    <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
+                        <Button
+                            variant={viewport === "mobile" ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => onViewportChange?.("mobile")}
+                            className="h-7 px-3 text-xs gap-2"
+                            title="Mobile (375px)"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2" /><path d="M12 18h.01" /></svg>
+                            SP
+                        </Button>
+                        <Button
+                            variant={viewport === "desktop" ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => onViewportChange?.("desktop")}
+                            className="h-7 px-3 text-xs gap-2"
+                            title="Desktop (1280px)"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="3" rx="2" /><line x1="8" x2="16" y1="21" y2="21" /><line x1="12" x2="12" y1="17" y2="21" /></svg>
+                            PC
+                        </Button>
+
+                    </div>
                 </div>
             </div>
 
@@ -367,7 +380,7 @@ export function AnnotationCanvas({
                 <div
                     className={cn(
                         "relative mx-auto bg-white shadow-2xl transition-all duration-300 ease-in-out",
-                        viewport === "mobile" ? "w-[375px]" : viewport === "desktop" ? "w-[1280px]" : "w-full"
+                        viewport === "mobile" ? "w-[375px]" : "w-[1280px]"
                     )}
                     style={{ height: "3000px" }}
                 >
@@ -382,7 +395,7 @@ export function AnnotationCanvas({
                     {/* Dark overlay when overlay mode is on */}
                     {isOverlayMode && (
                         <div
-                            className="absolute inset-0 w-full h-full pointer-events-none z-10 md:hidden"
+                            className="absolute inset-0 w-full h-full pointer-events-none z-10"
                             style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
                         />
                     )}

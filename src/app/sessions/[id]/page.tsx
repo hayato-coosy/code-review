@@ -16,7 +16,7 @@ export default function SessionPage({ params }: SessionPageProps) {
     const [session, setSession] = useState<Session | null>(null);
     const [comments, setComments] = useState<Comment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isOverlayMode, setIsOverlayMode] = useState(false);
+    const [isOverlayMode, setIsOverlayMode] = useState(true);
     const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
 
     // Unwrap params
@@ -124,10 +124,10 @@ export default function SessionPage({ params }: SessionPageProps) {
         setActiveCommentId(comment.id);
     };
 
-    const [viewport, setViewport] = useState<"responsive" | "desktop" | "mobile">("responsive");
+    const [viewport, setViewport] = useState<"desktop" | "mobile">("desktop");
 
-    // Map viewport to sidebar tab (responsive -> desktop)
-    const activeTab = viewport === "mobile" ? "mobile" : "desktop";
+    // Map viewport to sidebar tab
+    const activeTab = viewport;
 
     const handleTabChange = (tab: "desktop" | "mobile") => {
         setViewport(tab);
@@ -158,6 +158,7 @@ export default function SessionPage({ params }: SessionPageProps) {
                     onSetActiveComment={setActiveCommentId}
                     viewport={viewport}
                     onViewportChange={setViewport}
+                    onToggleOverlay={() => setIsOverlayMode(!isOverlayMode)}
                 />
             </div>
 
