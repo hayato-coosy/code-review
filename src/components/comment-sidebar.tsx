@@ -62,7 +62,7 @@ export function CommentSidebar({
             <div className="flex items-center justify-between border-b border-gray-700 p-4">
                 <h2 className="text-lg font-semibold text-white">コメント ({comments.length})</h2>
                 {isOverlayMode && (
-                    <Button variant="ghost" size="icon" onClick={onToggleOverlay} className="text-gray-400 hover:text-white hover:bg-gray-700">
+                    <Button variant="ghost" size="icon" onClick={onToggleOverlay} className="text-gray-400 hover:text-white hover:bg-gray-700 md:hidden">
                         <X className="h-4 w-4" />
                     </Button>
                 )}
