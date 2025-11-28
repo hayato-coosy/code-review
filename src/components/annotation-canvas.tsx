@@ -361,7 +361,10 @@ export function AnnotationCanvas({
                             variant={viewport === "mobile" ? "default" : "ghost"}
                             size="sm"
                             onClick={() => onViewportChange?.("mobile")}
-                            className="h-7 px-3 text-xs gap-2"
+                            className={cn(
+                                "h-7 px-3 text-xs gap-2",
+                                viewport === "mobile" && "font-semibold"
+                            )}
                             title="Mobile (375px)"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2" /><path d="M12 18h.01" /></svg>
@@ -371,12 +374,16 @@ export function AnnotationCanvas({
                             variant={viewport === "desktop" ? "default" : "ghost"}
                             size="sm"
                             onClick={() => onViewportChange?.("desktop")}
-                            className="h-7 px-3 text-xs gap-2"
+                            className={cn(
+                                "h-7 px-3 text-xs gap-2",
+                                viewport === "desktop" && "font-semibold"
+                            )}
                             title="Desktop (1280px)"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="3" rx="2" /><line x1="8" x2="16" y1="21" y2="21" /><line x1="12" x2="12" y1="17" y2="21" /></svg>
                             PC <span className="opacity-70">(1280px)</span>
                         </Button>
+
 
 
                     </div>

@@ -30,7 +30,7 @@ export function CommentSidebar({
 }: CommentSidebarProps) {
     const [filterCategory, setFilterCategory] = useState<string>("all");
     const [filterStatus, setFilterStatus] = useState<string>("all");
-    const [showCompleted, setShowCompleted] = useState<boolean>(true);
+    const [showCompleted, setShowCompleted] = useState<boolean>(false);
 
     // Sidebar state
     const [width, setWidth] = useState(320);
@@ -175,7 +175,7 @@ export function CommentSidebar({
                 <div className="border-b border-gray-600 p-4 space-y-3 min-w-[320px]">
                     <div className="flex items-center gap-2 text-sm font-medium text-gray-200">
                         <Filter className="h-4 w-4" />
-                        Filters
+                        フィルター
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                         <select
@@ -183,7 +183,7 @@ export function CommentSidebar({
                             value={filterCategory}
                             onChange={(e) => setFilterCategory(e.target.value)}
                         >
-                            <option value="all">すべてのカテゴリ</option>
+                            <option value="all">依頼者</option>
                             <option value="coding">🟢 コーディング</option>
                             <option value="design">🟠 デザイン</option>
                         </select>
@@ -192,7 +192,7 @@ export function CommentSidebar({
                             value={filterStatus}
                             onChange={(e) => setFilterStatus(e.target.value)}
                         >
-                            <option value="all">すべてのステータス</option>
+                            <option value="all">対応状況</option>
                             <option value="pending">⚪ 未対応</option>
                             <option value="in-progress">🔵 対応中</option>
                             <option value="completed">⚫ 完了</option>
