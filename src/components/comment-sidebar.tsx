@@ -138,28 +138,32 @@ export function CommentSidebar({
 
                 {/* Viewport Tabs */}
                 <div className="flex border-b border-gray-700 min-w-[320px]">
-                    <button
+                    <Button
+                        variant="ghost"
+                        size="default"
+                        onClick={() => onTabChange?.("desktop")}
                         className={cn(
-                            "flex-1 py-2 text-sm font-medium transition-colors",
+                            "flex-1 rounded-none py-3 text-base font-medium transition-all",
                             activeTab === "desktop"
-                                ? "border-b-2 border-blue-500 text-blue-400 bg-[#444]"
+                                ? "border-b-2 border-blue-500 bg-blue-600 text-white hover:bg-blue-700"
                                 : "text-gray-400 hover:text-white hover:bg-[#444]"
                         )}
-                        onClick={() => onTabChange?.("desktop")}
                     >
                         PC
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="default"
+                        onClick={() => onTabChange?.("mobile")}
                         className={cn(
-                            "flex-1 py-2 text-sm font-medium transition-colors",
+                            "flex-1 rounded-none py-3 text-base font-medium transition-all",
                             activeTab === "mobile"
-                                ? "border-b-2 border-blue-500 text-blue-400 bg-[#444]"
+                                ? "border-b-2 border-blue-500 bg-blue-600 text-white hover:bg-blue-700"
                                 : "text-gray-400 hover:text-white hover:bg-[#444]"
                         )}
-                        onClick={() => onTabChange?.("mobile")}
                     >
                         SP
-                    </button>
+                    </Button>
                 </div>
 
                 <div className="border-b border-gray-700 p-4 space-y-4 min-w-[320px]">
@@ -173,12 +177,12 @@ export function CommentSidebar({
                     </Button>
                 </div>
 
-                <div className="border-b border-gray-600 p-4 space-y-3 min-w-[320px]">
-                    <div className="flex items-center gap-2 text-sm font-medium text-gray-200">
-                        <Filter className="h-4 w-4" />
+                <div className="border-b border-gray-600 p-5 space-y-4 min-w-[320px]">
+                    <div className="flex items-center gap-2 text-base font-medium text-gray-200">
+                        <Filter className="h-5 w-5" />
                         フィルター
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                         <select
                             className="flex h-9 w-full rounded-md border border-gray-600 bg-[#444] text-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
                             value={filterCategory}
@@ -225,8 +229,11 @@ export function CommentSidebar({
                                 )}
                                 onClick={() => onCommentClick?.(comment)}
                             >
-                                <CardHeader className="p-3 pb-0">
-                                    <div className="flex items-center justify-between gap-2">
+                                <CardHeader className="p-4">
+                                    <div className="flex items-start justify-between gap-3 mb-2">
+                                        <CardTitle className={cn("text-base font-medium text-gray-100 leading-relaxed flex-1", comment.isCompleted && "line-through")}>
+                                            {comment.message}
+                                        </CardTitle>
                                         <select
                                             className={cn(
                                                 "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1 bg-transparent",
@@ -241,34 +248,14 @@ export function CommentSidebar({
                                             <option value="coding" className="bg-[#333]">コーディング</option>
                                             <option value="design" className="bg-[#333]">デザイン</option>
                                         </select>
-                                        <select
-                                            className={cn(
-                                                "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1 bg-transparent",
-                                                comment.status === "completed"
-                                                    ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                                                    : comment.status === "in-progress"
-                                                        ? "bg-sky-900/30 text-sky-300 hover:bg-sky-900/50"
-                                                        : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                                            )}
-                                            value={comment.status}
-                                            onChange={(e) => onUpdateComment?.(comment.id, { status: e.target.value as any })}
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
-                                            <option value="pending" className="bg-[#333]">未対応</option>
-                                            <option value="in-progress" className="bg-[#333]">対応中</option>
-                                            <option value="completed" className="bg-[#333]">完了</option>
-                                        </select>
                                     </div>
-                                </CardHeader>
-                                <CardContent className="p-3 pt-2">
-                                    <p className={cn("text-sm text-gray-100", comment.isCompleted && "line-through")}>
-                                        {comment.message}
-                                    </p>
-                                    <div className="mt-2 flex items-center justify-between text-xs text-gray-400">
+                                    <div className="flex items-center justify-between text-xs text-gray-400">
                                         <span>{comment.authorName || "Anonymous"}</span>
                                         <span>{new Date(comment.createdAt).toLocaleTimeString()}</span>
                                     </div>
-                                    <div className="mt-2 flex items-center gap-2">
+                                </CardHeader>
+                                <CardContent className="p-4 pt-0">
+                                    <div className="flex items-center gap-2 mt-2">
                                         <input
                                             type="checkbox"
                                             checked={comment.isCompleted || false}

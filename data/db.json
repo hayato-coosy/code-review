@@ -4,8 +4,24 @@
       "id": "gk4hi32",
       "targetUrl": "https://careers.crowdloan.jp",
       "createdAt": "2025-11-29T00:30:59.407Z",
-      "canvasHeight": 5000
+      "canvasHeight": 5500
     }
   ],
-  "comments": []
+  "comments": [
+    {
+      "id": "bu9goi5",
+      "createdAt": "2025-11-29T00:38:39.866Z",
+      "sessionId": "gk4hi32",
+      "message": "ああああ",
+      "authorName": "",
+      "category": "design",
+      "status": "completed",
+      "posX": 0.07600000000000001,
+      "posY": 0.04690909090909091,
+      "width": 0.48000000000000004,
+      "height": 0.03727272727272728,
+      "viewport": "mobile",
+      "isCompleted": false
+    }
+  ]
 }

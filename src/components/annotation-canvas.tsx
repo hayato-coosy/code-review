@@ -334,18 +334,18 @@ export function AnnotationCanvas({
     return (
         <div className="flex h-full flex-col bg-gray-100">
             {/* Toolbar */}
-            <div className="flex items-center justify-between border-b bg-white px-4 py-2 shadow-sm z-30">
+            <div className="flex items-center justify-between border-b bg-white px-6 py-3 shadow-sm z-30">
                 <div className="flex items-center gap-4">
                     <Button
                         variant={isPinMode ? "default" : "outline"}
-                        size="sm"
+                        size="default"
                         onClick={() => setIsPinMode(!isPinMode)}
                         className="gap-2"
                     >
-                        <PlusCircle className="h-4 w-4" />
+                        <PlusCircle className="h-5 w-5" />
                         {isPinMode ? "ピンモード: ON" : "ピンモード: OFF"}
                     </Button>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-sm text-muted-foreground">
                         {isPinMode ? "クリックまたはドラッグでコメントを追加・移動" : "閲覧モード"}
                     </span>
                 </div>
@@ -506,7 +506,7 @@ export function AnnotationCanvas({
                                                 {/* Colored pin on top */}
                                                 <MapPin
                                                     className={cn(
-                                                        "relative h-8 w-8 cursor-move transition-transform hover:scale-110",
+                                                        "w-8 h-8 drop-shadow-lg",
                                                         comment.status === "completed"
                                                             ? "text-gray-500 fill-gray-500"
                                                             : comment.status === "in-progress"
@@ -576,8 +576,8 @@ export function AnnotationCanvas({
                                         )}
 
                                         {activePinId === comment.id && (
-                                            <div className="absolute left-0 top-full z-10 mt-2 w-72 rounded-lg border bg-white p-4 shadow-xl" style={{ borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1" }}>
-                                                <div className="mb-3 flex items-center justify-between gap-2">
+                                            <div className="absolute left-0 top-full z-10 mt-2 w-80 rounded-lg border bg-white p-5 shadow-xl" style={{ borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1" }}>
+                                                <div className="mb-4 flex items-center justify-between gap-2">
                                                     <select
                                                         className={cn(
                                                             "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1",
@@ -724,8 +724,8 @@ export function AnnotationCanvas({
                                     >
                                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
                                             <div className="relative">
-                                                <MapPin className="absolute h-8 w-8 text-white fill-white animate-bounce" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
-                                                <MapPin className="relative h-8 w-8 text-primary fill-primary animate-bounce" />
+                                                <MapPin className="absolute w-8 h-8 text-white fill-white" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
+                                                <MapPin className="w-8 h-8 text-red-500 fill-red-400 animate-bounce" />
                                             </div>
                                         </div>
                                     </div>
@@ -735,6 +735,7 @@ export function AnnotationCanvas({
                                         <MapPin className="relative h-10 w-10 text-primary fill-primary animate-bounce" />
                                     </div>
                                 )}
+
 
                                 {/* Comment Modal */}
                                 <div
