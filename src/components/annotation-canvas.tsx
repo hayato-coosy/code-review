@@ -325,6 +325,31 @@ export function AnnotationCanvas({
         };
     };
 
+    const [canvasHeight, setCanvasHeight] = useState(5000);
+    const [isResizingCanvas, setIsResizingCanvas] = useState(false);
+
+    const handleCanvasResizeStart = (e: React.MouseEvent) => {
+        e.preventDefault();
+        setIsResizingCanvas(true);
+
+        const startY = e.clientY;
+        const startHeight = canvasHeight;
+
+        const handleMouseMove = (moveEvent: globalThis.MouseEvent) => {
+            const deltaY = moveEvent.clientY - startY;
+            setCanvasHeight(Math.max(1000, startHeight + deltaY));
+        };
+
+        const handleMouseUp = () => {
+            setIsResizingCanvas(false);
+            document.removeEventListener("mousemove", handleMouseMove);
+            document.removeEventListener("mouseup", handleMouseUp);
+        };
+
+        document.addEventListener("mousemove", handleMouseMove);
+        document.addEventListener("mouseup", handleMouseUp);
+    };
+
     return (
         <div className="flex h-full flex-col bg-gray-100">
             {/* Toolbar */}
@@ -385,7 +410,6 @@ export function AnnotationCanvas({
                         </Button>
 
 
-
                     </div>
                 </div>
             </div>
@@ -397,7 +421,7 @@ export function AnnotationCanvas({
                         "relative mx-auto bg-white shadow-2xl transition-all duration-300 ease-in-out",
                         viewport === "mobile" ? "w-[375px]" : "w-[1280px]"
                     )}
-                    style={{ height: "10000px" }}
+                    style={{ height: `${canvasHeight}px` }}
                 >
                     {/* Iframe */}
                     <iframe
@@ -414,6 +438,15 @@ export function AnnotationCanvas({
                             style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
                         />
                     )}
+
+                    {/* Resize Handle */}
+                    <div
+                        className="absolute bottom-0 left-0 right-0 h-6 bg-gray-200 hover:bg-blue-500 cursor-ns-resize flex items-center justify-center transition-colors z-20 group"
+                        onMouseDown={handleCanvasResizeStart}
+                        title="ドラッグして高さを調整"
+                    >
+                        <div className="w-12 h-1 bg-gray-400 rounded-full group-hover:bg-white" />
+                    </div>
 
                     {/* Overlay */}
                     <div
