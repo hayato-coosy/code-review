@@ -55,13 +55,33 @@ export function AnnotationCanvas({
     const setActivePinId = onSetActiveComment || setLocalActivePinId;
 
     // For moving existing pins/areas
+    // For moving existing pins/areas
     const [movingCommentId, setMovingCommentId] = useState<string | null>(null);
-    const [moveStart, setMoveStart] = useState<{ x: number; y: number } | null>(null);
+    const [tempMove, setTempMove] = useState<{ x: number; y: number } | null>(null);
+
+    // Refs for performance (avoiding getBoundingClientRect on every move)
+    const dragInfoRef = useRef<{
+        startX: number;
+        startY: number;
+        initialCommentX: number;
+        initialCommentY: number;
+        overlayRect: DOMRect;
+    } | null>(null);
 
     // For resizing areas
     const [resizingCommentId, setResizingCommentId] = useState<string | null>(null);
     const [resizeHandle, setResizeHandle] = useState<'tl' | 'tr' | 'bl' | 'br' | null>(null);
-    const [resizeStart, setResizeStart] = useState<{ x: number; y: number; origPosX: number; origPosY: number; origWidth: number; origHeight: number } | null>(null);
+    const [tempResize, setTempResize] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+
+    const resizeInfoRef = useRef<{
+        startX: number;
+        startY: number;
+        initialX: number;
+        initialY: number;
+        initialWidth: number;
+        initialHeight: number;
+        overlayRect: DOMRect;
+    } | null>(null);
 
     // Helper to get coordinates from mouse or touch event
     const getClientCoordinates = (e: MouseEvent | TouchEvent | React.MouseEvent | React.TouchEvent) => {
@@ -140,7 +160,11 @@ export function AnnotationCanvas({
 
     // Handle moving existing comments
     const handleCommentMouseDown = (e: React.MouseEvent | React.TouchEvent, commentId: string, comment: Comment) => {
-        if (!isPinMode) return;
+        console.log('handleCommentMouseDown', commentId);
+        if (!isPinMode) {
+            console.log('Not in pin mode');
+            return;
+        }
         e.stopPropagation();
 
         // Get the overlay element (not the pin's parent)
@@ -149,43 +173,61 @@ export function AnnotationCanvas({
             // Fallback: try to find the overlay in the document
             overlay = document.querySelector('.annotation-overlay');
         }
-        if (!overlay) return;
+        if (!overlay) {
+            console.error('Overlay not found');
+            return;
+        }
 
         const rect = overlay.getBoundingClientRect();
+        console.log('Overlay rect:', rect);
         const { clientX, clientY } = getClientCoordinates(e);
-        const x = (clientX - rect.left) / rect.width;
-        const y = (clientY - rect.top) / rect.height;
+
+        // Store initial values in ref
+        dragInfoRef.current = {
+            startX: clientX,
+            startY: clientY,
+            initialCommentX: comment.posX,
+            initialCommentY: comment.posY,
+            overlayRect: rect
+        };
+        console.log('Drag info set:', dragInfoRef.current);
 
         setMovingCommentId(commentId);
-        setMoveStart({ x, y });
+        setTempMove({ x: comment.posX, y: comment.posY });
     };
 
     const handleCommentMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
-        if (!movingCommentId || !moveStart || !onUpdateComment) return;
+        if (!movingCommentId) return;
 
-        const comment = comments.find(c => c.id === movingCommentId);
-        if (!comment) return;
+        if (!dragInfoRef.current) {
+            console.warn('Missing dragInfoRef during move');
+            return;
+        }
 
-        const rect = e.currentTarget.getBoundingClientRect();
+        const { startX, startY, initialCommentX, initialCommentY, overlayRect } = dragInfoRef.current;
         const { clientX, clientY } = getClientCoordinates(e);
-        const currentX = (clientX - rect.left) / rect.width;
-        const currentY = (clientY - rect.top) / rect.height;
 
-        const deltaX = currentX - moveStart.x;
-        const deltaY = currentY - moveStart.y;
+        // Calculate delta in percentage relative to overlay size
+        const deltaX = (clientX - startX) / overlayRect.width;
+        const deltaY = (clientY - startY) / overlayRect.height;
 
-        // Update position
-        onUpdateComment(movingCommentId, {
-            posX: comment.posX + deltaX,
-            posY: comment.posY + deltaY,
+        // Update local temp state
+        setTempMove({
+            x: initialCommentX + deltaX,
+            y: initialCommentY + deltaY,
         });
-
-        setMoveStart({ x: currentX, y: currentY });
     };
 
     const handleCommentMouseUp = () => {
+        if (movingCommentId && tempMove && onUpdateComment) {
+            onUpdateComment(movingCommentId, {
+                posX: tempMove.x,
+                posY: tempMove.y,
+            });
+        }
         setMovingCommentId(null);
-        setMoveStart(null);
+        setTempMove(null);
+        dragInfoRef.current = null;
     };
 
     // Handle resizing areas
@@ -199,63 +241,65 @@ export function AnnotationCanvas({
 
         const rect = overlay.getBoundingClientRect();
         const { clientX, clientY } = getClientCoordinates(e);
-        const x = (clientX - rect.left) / rect.width;
-        const y = (clientY - rect.top) / rect.height;
+
+        resizeInfoRef.current = {
+            startX: clientX,
+            startY: clientY,
+            initialX: comment.posX,
+            initialY: comment.posY,
+            initialWidth: comment.width,
+            initialHeight: comment.height,
+            overlayRect: rect
+        };
 
         setResizingCommentId(commentId);
         setResizeHandle(handle);
-        setResizeStart({
-            x,
-            y,
-            origPosX: comment.posX,
-            origPosY: comment.posY,
-            origWidth: comment.width,
-            origHeight: comment.height,
+        setTempResize({
+            x: comment.posX,
+            y: comment.posY,
+            width: comment.width,
+            height: comment.height,
         });
     };
 
     const handleResizeMouseMove = (e: MouseEvent) => {
-        if (!resizingCommentId || !resizeHandle || !resizeStart || !onUpdateComment) return;
+        if (!resizingCommentId || !resizeHandle || !resizeInfoRef.current) return;
 
-        const comment = comments.find(c => c.id === resizingCommentId);
-        if (!comment || !comment.width || !comment.height) return;
+        const { startX, startY, initialX, initialY, initialWidth, initialHeight, overlayRect } = resizeInfoRef.current;
+        const { clientX, clientY } = getClientCoordinates(e as any);
 
-        const rect = e.currentTarget.getBoundingClientRect();
-        const currentX = (e.clientX - rect.left) / rect.width;
-        const currentY = (e.clientY - rect.top) / rect.height;
+        const deltaX = (clientX - startX) / overlayRect.width;
+        const deltaY = (clientY - startY) / overlayRect.height;
 
-        const deltaX = currentX - resizeStart.x;
-        const deltaY = currentY - resizeStart.y;
-
-        let newPosX = resizeStart.origPosX;
-        let newPosY = resizeStart.origPosY;
-        let newWidth = resizeStart.origWidth;
-        let newHeight = resizeStart.origHeight;
+        let newPosX = initialX;
+        let newPosY = initialY;
+        let newWidth = initialWidth;
+        let newHeight = initialHeight;
 
         // Adjust based on which handle is being dragged
         if (resizeHandle === 'tl') {
-            newPosX = resizeStart.origPosX + deltaX;
-            newPosY = resizeStart.origPosY + deltaY;
-            newWidth = resizeStart.origWidth - deltaX;
-            newHeight = resizeStart.origHeight - deltaY;
+            newPosX = initialX + deltaX;
+            newPosY = initialY + deltaY;
+            newWidth = initialWidth - deltaX;
+            newHeight = initialHeight - deltaY;
         } else if (resizeHandle === 'tr') {
-            newPosY = resizeStart.origPosY + deltaY;
-            newWidth = resizeStart.origWidth + deltaX;
-            newHeight = resizeStart.origHeight - deltaY;
+            newPosY = initialY + deltaY;
+            newWidth = initialWidth + deltaX;
+            newHeight = initialHeight - deltaY;
         } else if (resizeHandle === 'bl') {
-            newPosX = resizeStart.origPosX + deltaX;
-            newWidth = resizeStart.origWidth - deltaX;
-            newHeight = resizeStart.origHeight + deltaY;
+            newPosX = initialX + deltaX;
+            newWidth = initialWidth - deltaX;
+            newHeight = initialHeight + deltaY;
         } else if (resizeHandle === 'br') {
-            newWidth = resizeStart.origWidth + deltaX;
-            newHeight = resizeStart.origHeight + deltaY;
+            newWidth = initialWidth + deltaX;
+            newHeight = initialHeight + deltaY;
         }
 
         // Ensure minimum size
         if (newWidth > 0.02 && newHeight > 0.02) {
-            onUpdateComment(resizingCommentId, {
-                posX: newPosX,
-                posY: newPosY,
+            setTempResize({
+                x: newPosX,
+                y: newPosY,
                 width: newWidth,
                 height: newHeight,
             });
@@ -263,9 +307,18 @@ export function AnnotationCanvas({
     };
 
     const handleResizeMouseUp = () => {
+        if (resizingCommentId && tempResize && onUpdateComment) {
+            onUpdateComment(resizingCommentId, {
+                posX: tempResize.x,
+                posY: tempResize.y,
+                width: tempResize.width,
+                height: tempResize.height,
+            });
+        }
         setResizingCommentId(null);
         setResizeHandle(null);
-        setResizeStart(null);
+        setTempResize(null);
+        resizeInfoRef.current = null;
     };
 
     const handleSave = async () => {
@@ -510,51 +563,225 @@ export function AnnotationCanvas({
                         )}
 
                         {/* Existing Pins and Areas */}
-                        {visibleComments.map((comment) => (
-                            <div key={comment.id}>
-                                {comment.width && comment.height ? (
-                                    // Area selection with resize handles
-                                    <div
-                                        className={cn(
-                                            "absolute border-4 border-dashed cursor-pointer pointer-events-auto",
-                                            resizingCommentId === comment.id && "border-[6px]"
-                                        )}
-                                        style={{
-                                            left: `${comment.posX * 100}%`,
-                                            top: `${comment.posY * 100}%`,
-                                            width: `${comment.width * 100}%`,
-                                            height: `${comment.height * 100}%`,
-                                            borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1",
-                                            boxShadow: `0 0 0 2px rgba(255, 255, 255, 0.8), 0 0 0 4px ${comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1"}`,
-                                        }}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setActivePinId(activePinId === comment.id ? null : comment.id);
-                                        }}
-                                    >
-                                        {/* Pin at center of area - with white outline for visibility */}
+                        {visibleComments.map((comment) => {
+                            // Use local temp state if this comment is being moved or resized
+                            const isMoving = movingCommentId === comment.id && tempMove;
+                            const isResizing = resizingCommentId === comment.id && tempResize;
+
+                            const posX = isMoving ? tempMove!.x : (isResizing ? tempResize!.x : comment.posX);
+                            const posY = isMoving ? tempMove!.y : (isResizing ? tempResize!.y : comment.posY);
+                            const width = isResizing ? tempResize!.width : comment.width;
+                            const height = isResizing ? tempResize!.height : comment.height;
+
+                            return (
+                                <div key={comment.id}>
+                                    {width && height ? (
+                                        // Area selection with resize handles
                                         <div
-                                            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-move"
-                                            onMouseDown={(e) => {
-                                                e.stopPropagation();
-                                                handleCommentMouseDown(e, comment.id, comment);
+                                            className={cn(
+                                                "absolute border-4 border-dashed cursor-pointer pointer-events-auto",
+                                                resizingCommentId === comment.id && "border-[6px]"
+                                            )}
+                                            style={{
+                                                left: `${posX * 100}%`,
+                                                top: `${posY * 100}%`,
+                                                width: `${width * 100}%`,
+                                                height: `${height * 100}%`,
+                                                borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1",
+                                                boxShadow: `0 0 0 2px rgba(255, 255, 255, 0.8), 0 0 0 4px ${comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1"}`,
                                             }}
-                                            onTouchStart={(e) => {
+                                            onClick={(e) => {
                                                 e.stopPropagation();
-                                                handleCommentMouseDown(e, comment.id, comment);
+                                                setActivePinId(activePinId === comment.id ? null : comment.id);
                                             }}
-                                            style={{ pointerEvents: 'auto' }}
                                         >
-                                            <div className="relative">
+                                            {/* Pin at center of area - with white outline for visibility */}
+                                            <div
+                                                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-move"
+                                                onMouseDown={(e) => {
+                                                    e.stopPropagation();
+                                                    handleCommentMouseDown(e, comment.id, comment);
+                                                }}
+                                                onTouchStart={(e) => {
+                                                    e.stopPropagation();
+                                                    handleCommentMouseDown(e, comment.id, comment);
+                                                }}
+                                                style={{ pointerEvents: 'auto' }}
+                                            >
+                                                <div className="relative">
+                                                    {/* White outline */}
+                                                    <MapPin
+                                                        className="absolute w-6 h-6 md:w-8 md:h-8 text-white fill-white"
+                                                        style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}
+                                                    />
+                                                    {/* Colored pin on top */}
+                                                    <MapPin
+                                                        className={cn(
+                                                            "w-6 h-6 md:w-8 md:h-8 drop-shadow-lg",
+                                                            comment.status === "completed"
+                                                                ? "text-gray-500 fill-gray-500"
+                                                                : comment.status === "in-progress"
+                                                                    ? "text-sky-500 fill-sky-500"
+                                                                    : "text-slate-400 fill-slate-400"
+                                                        )}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Resize handles - with white stroke for visibility */}
+                                            {isPinMode && (
+                                                <>
+                                                    {/* Top-left */}
+                                                    <div
+                                                        className="absolute -left-2 -top-2 w-5 h-5 bg-white border-2 cursor-nwse-resize z-10 hover:scale-125 transition-transform rounded-full"
+                                                        style={{
+                                                            borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1",
+                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                                        }}
+                                                        onMouseDown={(e) => {
+                                                            e.stopPropagation();
+                                                            handleResizeMouseDown(e, comment.id, comment, 'tl');
+                                                        }}
+                                                        onTouchStart={(e) => {
+                                                            e.stopPropagation();
+                                                            handleResizeMouseDown(e, comment.id, comment, 'tl');
+                                                        }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    />
+                                                    {/* Top-right */}
+                                                    <div
+                                                        className="absolute -right-2 -top-2 w-5 h-5 bg-white border-2 cursor-nesw-resize z-10 hover:scale-125 transition-transform rounded-full"
+                                                        style={{
+                                                            borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1",
+                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                                        }}
+                                                        onMouseDown={(e) => {
+                                                            e.stopPropagation();
+                                                            handleResizeMouseDown(e, comment.id, comment, 'tr');
+                                                        }}
+                                                        onTouchStart={(e) => {
+                                                            e.stopPropagation();
+                                                            handleResizeMouseDown(e, comment.id, comment, 'tr');
+                                                        }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    />
+                                                    {/* Bottom-left */}
+                                                    <div
+                                                        className="absolute -left-2 -bottom-2 w-5 h-5 bg-white border-2 cursor-nesw-resize z-10 hover:scale-125 transition-transform rounded-full"
+                                                        style={{
+                                                            borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1",
+                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                                        }}
+                                                        onMouseDown={(e) => {
+                                                            e.stopPropagation();
+                                                            handleResizeMouseDown(e, comment.id, comment, 'bl');
+                                                        }}
+                                                        onTouchStart={(e) => {
+                                                            e.stopPropagation();
+                                                            handleResizeMouseDown(e, comment.id, comment, 'bl');
+                                                        }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    />
+                                                    {/* Bottom-right */}
+                                                    <div
+                                                        className="absolute -right-2 -bottom-2 w-5 h-5 bg-white border-2 cursor-nwse-resize z-10 hover:scale-125 transition-transform rounded-full"
+                                                        style={{
+                                                            borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1",
+                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                                        }}
+                                                        onMouseDown={(e) => {
+                                                            e.stopPropagation();
+                                                            handleResizeMouseDown(e, comment.id, comment, 'br');
+                                                        }}
+                                                        onTouchStart={(e) => {
+                                                            e.stopPropagation();
+                                                            handleResizeMouseDown(e, comment.id, comment, 'br');
+                                                        }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    />
+                                                </>
+                                            )}
+
+                                            {activePinId === comment.id && (
+                                                <div className="absolute left-0 top-full z-10 mt-2 w-80 rounded-lg border bg-white p-5 shadow-xl" style={{ borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1" }}>
+                                                    <div className="mb-4 flex items-center justify-between gap-2">
+                                                        <select
+                                                            className={cn(
+                                                                "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1",
+                                                                comment.category === "coding"
+                                                                    ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                                                    : "bg-orange-100 text-orange-700 hover:bg-orange-200"
+                                                            )}
+                                                            value={comment.category}
+                                                            onChange={(e) => onUpdateComment?.(comment.id, { category: e.target.value as any })}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            <option value="coding">コーディング</option>
+                                                            <option value="design">デザイン</option>
+                                                        </select>
+                                                        <select
+                                                            className={cn(
+                                                                "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1",
+                                                                comment.status === "completed"
+                                                                    ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                                                    : comment.status === "in-progress"
+                                                                        ? "bg-sky-100 text-sky-700 hover:bg-sky-200"
+                                                                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                                            )}
+                                                            value={comment.status}
+                                                            onChange={(e) => onUpdateComment?.(comment.id, { status: e.target.value as any })}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            <option value="pending">未対応</option>
+                                                            <option value="in-progress">対応中</option>
+                                                            <option value="completed">完了</option>
+                                                        </select>
+                                                    </div>
+                                                    <p className="text-base font-medium text-gray-900 mb-2">{comment.message}</p>
+                                                    {comment.authorName && (
+                                                        <p className="text-sm text-gray-600">
+                                                            👤 {comment.authorName}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        // Pin only - with white outline for visibility
+                                        <div
+                                            className={cn(
+                                                "absolute -translate-x-1/2 -translate-y-1/2 pointer-events-auto",
+                                                movingCommentId === comment.id && "scale-125"
+                                            )}
+                                            style={{
+                                                left: `${posX * 100}%`,
+                                                top: `${posY * 100}%`,
+                                            }}
+                                        >
+                                            <div
+                                                className="relative w-10 h-10 cursor-move"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setActivePinId(activePinId === comment.id ? null : comment.id);
+                                                }}
+                                                onMouseDown={(e) => {
+                                                    e.stopPropagation();
+                                                    handleCommentMouseDown(e, comment.id, comment);
+                                                }}
+                                                onTouchStart={(e) => {
+                                                    e.stopPropagation();
+                                                    handleCommentMouseDown(e, comment.id, comment);
+                                                }}
+                                            >
                                                 {/* White outline */}
                                                 <MapPin
-                                                    className="absolute w-6 h-6 md:w-8 md:h-8 text-white fill-white"
+                                                    className="absolute inset-0 h-10 w-10 text-white fill-white pointer-events-none"
                                                     style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}
                                                 />
                                                 {/* Colored pin on top */}
                                                 <MapPin
                                                     className={cn(
-                                                        "w-6 h-6 md:w-8 md:h-8 drop-shadow-lg",
+                                                        "absolute inset-0 h-10 w-10 transition-transform hover:scale-110 pointer-events-none",
                                                         comment.status === "completed"
                                                             ? "text-gray-500 fill-gray-500"
                                                             : comment.status === "in-progress"
@@ -563,217 +790,54 @@ export function AnnotationCanvas({
                                                     )}
                                                 />
                                             </div>
-                                        </div>
-
-                                        {/* Resize handles - with white stroke for visibility */}
-                                        {isPinMode && (
-                                            <>
-                                                {/* Top-left */}
-                                                <div
-                                                    className="absolute -left-2 -top-2 w-5 h-5 bg-white border-2 cursor-nwse-resize z-10 hover:scale-125 transition-transform rounded-full"
-                                                    style={{
-                                                        borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1",
-                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                                                    }}
-                                                    onMouseDown={(e) => {
-                                                        e.stopPropagation();
-                                                        handleResizeMouseDown(e, comment.id, comment, 'tl');
-                                                    }}
-                                                    onTouchStart={(e) => {
-                                                        e.stopPropagation();
-                                                        handleResizeMouseDown(e, comment.id, comment, 'tl');
-                                                    }}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                />
-                                                {/* Top-right */}
-                                                <div
-                                                    className="absolute -right-2 -top-2 w-5 h-5 bg-white border-2 cursor-nesw-resize z-10 hover:scale-125 transition-transform rounded-full"
-                                                    style={{
-                                                        borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1",
-                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                                                    }}
-                                                    onMouseDown={(e) => {
-                                                        e.stopPropagation();
-                                                        handleResizeMouseDown(e, comment.id, comment, 'tr');
-                                                    }}
-                                                    onTouchStart={(e) => {
-                                                        e.stopPropagation();
-                                                        handleResizeMouseDown(e, comment.id, comment, 'tr');
-                                                    }}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                />
-                                                {/* Bottom-left */}
-                                                <div
-                                                    className="absolute -left-2 -bottom-2 w-5 h-5 bg-white border-2 cursor-nesw-resize z-10 hover:scale-125 transition-transform rounded-full"
-                                                    style={{
-                                                        borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1",
-                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                                                    }}
-                                                    onMouseDown={(e) => {
-                                                        e.stopPropagation();
-                                                        handleResizeMouseDown(e, comment.id, comment, 'bl');
-                                                    }}
-                                                    onTouchStart={(e) => {
-                                                        e.stopPropagation();
-                                                        handleResizeMouseDown(e, comment.id, comment, 'bl');
-                                                    }}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                />
-                                                {/* Bottom-right */}
-                                                <div
-                                                    className="absolute -right-2 -bottom-2 w-5 h-5 bg-white border-2 cursor-nwse-resize z-10 hover:scale-125 transition-transform rounded-full"
-                                                    style={{
-                                                        borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1",
-                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                                                    }}
-                                                    onMouseDown={(e) => {
-                                                        e.stopPropagation();
-                                                        handleResizeMouseDown(e, comment.id, comment, 'br');
-                                                    }}
-                                                    onTouchStart={(e) => {
-                                                        e.stopPropagation();
-                                                        handleResizeMouseDown(e, comment.id, comment, 'br');
-                                                    }}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                />
-                                            </>
-                                        )}
-
-                                        {activePinId === comment.id && (
-                                            <div className="absolute left-0 top-full z-10 mt-2 w-80 rounded-lg border bg-white p-5 shadow-xl" style={{ borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1" }}>
-                                                <div className="mb-4 flex items-center justify-between gap-2">
-                                                    <select
-                                                        className={cn(
-                                                            "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1",
-                                                            comment.category === "coding"
-                                                                ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                                                                : "bg-orange-100 text-orange-700 hover:bg-orange-200"
-                                                        )}
-                                                        value={comment.category}
-                                                        onChange={(e) => onUpdateComment?.(comment.id, { category: e.target.value as any })}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <option value="coding">コーディング</option>
-                                                        <option value="design">デザイン</option>
-                                                    </select>
-                                                    <select
-                                                        className={cn(
-                                                            "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1",
-                                                            comment.status === "completed"
-                                                                ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                                                                : comment.status === "in-progress"
-                                                                    ? "bg-sky-100 text-sky-700 hover:bg-sky-200"
-                                                                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                                                        )}
-                                                        value={comment.status}
-                                                        onChange={(e) => onUpdateComment?.(comment.id, { status: e.target.value as any })}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <option value="pending">未対応</option>
-                                                        <option value="in-progress">対応中</option>
-                                                        <option value="completed">完了</option>
-                                                    </select>
+                                            {activePinId === comment.id && (
+                                                <div className="absolute left-1/2 top-full z-10 mt-2 w-72 -translate-x-1/2 rounded-lg border bg-white p-4 shadow-xl" style={{ borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1" }}>
+                                                    <div className="mb-3 flex items-center justify-between gap-2">
+                                                        <select
+                                                            className={cn(
+                                                                "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1",
+                                                                comment.category === "coding"
+                                                                    ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                                                    : "bg-orange-100 text-orange-700 hover:bg-orange-200"
+                                                            )}
+                                                            value={comment.category}
+                                                            onChange={(e) => onUpdateComment?.(comment.id, { category: e.target.value as any })}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            <option value="coding">コーディング</option>
+                                                            <option value="design">デザイン</option>
+                                                        </select>
+                                                        <select
+                                                            className={cn(
+                                                                "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1",
+                                                                comment.status === "completed"
+                                                                    ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                                                    : comment.status === "in-progress"
+                                                                        ? "bg-sky-100 text-sky-700 hover:bg-sky-200"
+                                                                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                                            )}
+                                                            value={comment.status}
+                                                            onChange={(e) => onUpdateComment?.(comment.id, { status: e.target.value as any })}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            <option value="pending">未対応</option>
+                                                            <option value="in-progress">対応中</option>
+                                                            <option value="completed">完了</option>
+                                                        </select>
+                                                    </div>
+                                                    <p className="text-base font-medium text-gray-900 mb-2">{comment.message}</p>
+                                                    {comment.authorName && (
+                                                        <p className="text-sm text-gray-600">
+                                                            👤 {comment.authorName}
+                                                        </p>
+                                                    )}
                                                 </div>
-                                                <p className="text-base font-medium text-gray-900 mb-2">{comment.message}</p>
-                                                {comment.authorName && (
-                                                    <p className="text-sm text-gray-600">
-                                                        👤 {comment.authorName}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    // Pin only - with white outline for visibility
-                                    <div
-                                        className={cn(
-                                            "absolute -translate-x-1/2 -translate-y-1/2 pointer-events-auto",
-                                            movingCommentId === comment.id && "scale-125"
-                                        )}
-                                        style={{
-                                            left: `${comment.posX * 100}%`,
-                                            top: `${comment.posY * 100}%`,
-                                        }}
-                                    >
-                                        <div
-                                            className="relative w-10 h-10 cursor-move"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setActivePinId(activePinId === comment.id ? null : comment.id);
-                                            }}
-                                            onMouseDown={(e) => {
-                                                e.stopPropagation();
-                                                handleCommentMouseDown(e, comment.id, comment);
-                                            }}
-                                            onTouchStart={(e) => {
-                                                e.stopPropagation();
-                                                handleCommentMouseDown(e, comment.id, comment);
-                                            }}
-                                        >
-                                            {/* White outline */}
-                                            <MapPin
-                                                className="absolute inset-0 h-10 w-10 text-white fill-white pointer-events-none"
-                                                style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}
-                                            />
-                                            {/* Colored pin on top */}
-                                            <MapPin
-                                                className={cn(
-                                                    "absolute inset-0 h-10 w-10 transition-transform hover:scale-110 pointer-events-none",
-                                                    comment.status === "completed"
-                                                        ? "text-gray-500 fill-gray-500"
-                                                        : comment.status === "in-progress"
-                                                            ? "text-sky-500 fill-sky-500"
-                                                            : "text-slate-400 fill-slate-400"
-                                                )}
-                                            />
+                                            )}
                                         </div>
-                                        {activePinId === comment.id && (
-                                            <div className="absolute left-1/2 top-full z-10 mt-2 w-72 -translate-x-1/2 rounded-lg border bg-white p-4 shadow-xl" style={{ borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1" }}>
-                                                <div className="mb-3 flex items-center justify-between gap-2">
-                                                    <select
-                                                        className={cn(
-                                                            "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1",
-                                                            comment.category === "coding"
-                                                                ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                                                                : "bg-orange-100 text-orange-700 hover:bg-orange-200"
-                                                        )}
-                                                        value={comment.category}
-                                                        onChange={(e) => onUpdateComment?.(comment.id, { category: e.target.value as any })}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <option value="coding">コーディング</option>
-                                                        <option value="design">デザイン</option>
-                                                    </select>
-                                                    <select
-                                                        className={cn(
-                                                            "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1",
-                                                            comment.status === "completed"
-                                                                ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                                                                : comment.status === "in-progress"
-                                                                    ? "bg-sky-100 text-sky-700 hover:bg-sky-200"
-                                                                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                                                        )}
-                                                        value={comment.status}
-                                                        onChange={(e) => onUpdateComment?.(comment.id, { status: e.target.value as any })}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <option value="pending">未対応</option>
-                                                        <option value="in-progress">対応中</option>
-                                                        <option value="completed">完了</option>
-                                                    </select>
-                                                </div>
-                                                <p className="text-base font-medium text-gray-900 mb-2">{comment.message}</p>
-                                                {comment.authorName && (
-                                                    <p className="text-sm text-gray-600">
-                                                        👤 {comment.authorName}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
+                                    )}
+                                </div>
+                            );
+                        })}
 
                         {/* Temp Pin/Area & Modal */}
                         {isAdding && tempPin && (
