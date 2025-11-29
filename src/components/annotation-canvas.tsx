@@ -397,7 +397,7 @@ export function AnnotationCanvas({
                         "relative mx-auto bg-white shadow-2xl transition-all duration-300 ease-in-out",
                         viewport === "mobile" ? "w-[375px]" : "w-[1280px]"
                     )}
-                    style={{ height: "3000px" }}
+                    style={{ height: "10000px" }}
                 >
                     {/* Iframe */}
                     <iframe
