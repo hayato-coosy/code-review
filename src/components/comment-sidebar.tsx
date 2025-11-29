@@ -63,8 +63,11 @@ export function CommentSidebar({
     };
 
     const filteredComments = comments.filter((c) => {
-        // Hide completed tasks (check both status and isCompleted for backward compatibility)
-        if (!showCompleted && (c.status === "completed" || c.isCompleted)) return false;
+        // Filter by completion status (exclusive: show only completed OR only incomplete)
+        const isCompleted = c.status === "completed" || c.isCompleted;
+        if (showCompleted && !isCompleted) return false; // Show completed only
+        if (!showCompleted && isCompleted) return false; // Show incomplete only
+
         if (filterCategory !== "all" && c.category !== filterCategory) return false;
         if (filterStatus !== "all" && c.status !== filterStatus) return false;
 
