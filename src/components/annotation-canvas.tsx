@@ -421,7 +421,7 @@ export function AnnotationCanvas({
                     )}
 
                     {/* Extend Height Button */}
-                    <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-8 pt-12 bg-gradient-to-t from-black/10 to-transparent pointer-events-none z-20">
+                    <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-8 pt-12 bg-gradient-to-t from-black/10 to-transparent pointer-events-none z-50">
                         <Button
                             variant="secondary"
                             onClick={() => onCanvasHeightChange?.(currentHeight + 500)}
