@@ -144,7 +144,11 @@ export function AnnotationCanvas({
         e.stopPropagation();
 
         // Get the overlay element (not the pin's parent)
-        const overlay = e.currentTarget.closest('.annotation-overlay');
+        let overlay = e.currentTarget.closest('.annotation-overlay');
+        if (!overlay) {
+            // Fallback: try to find the overlay in the document
+            overlay = document.querySelector('.annotation-overlay');
+        }
         if (!overlay) return;
 
         const rect = overlay.getBoundingClientRect();
@@ -698,6 +702,10 @@ export function AnnotationCanvas({
                                                 setActivePinId(activePinId === comment.id ? null : comment.id);
                                             }}
                                             onMouseDown={(e) => {
+                                                e.stopPropagation();
+                                                handleCommentMouseDown(e, comment.id, comment);
+                                            }}
+                                            onTouchStart={(e) => {
                                                 e.stopPropagation();
                                                 handleCommentMouseDown(e, comment.id, comment);
                                             }}
