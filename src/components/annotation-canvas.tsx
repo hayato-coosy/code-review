@@ -63,29 +63,55 @@ export function AnnotationCanvas({
     const [resizeHandle, setResizeHandle] = useState<'tl' | 'tr' | 'bl' | 'br' | null>(null);
     const [resizeStart, setResizeStart] = useState<{ x: number; y: number; origPosX: number; origPosY: number; origWidth: number; origHeight: number } | null>(null);
 
-    const handleOverlayMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+    // Helper to get coordinates from mouse or touch event
+    const getClientCoordinates = (e: MouseEvent | TouchEvent | React.MouseEvent | React.TouchEvent) => {
+        if ('touches' in e && e.touches.length > 0) {
+            return {
+                clientX: e.touches[0].clientX,
+                clientY: e.touches[0].clientY,
+            };
+        } else if ('changedTouches' in e && e.changedTouches.length > 0) {
+            return {
+                clientX: e.changedTouches[0].clientX,
+                clientY: e.changedTouches[0].clientY,
+            };
+        }
+        return {
+            clientX: (e as any).clientX,
+            clientY: (e as any).clientY,
+        };
+    };
+
+    // Handle clicking on the overlay to add a pin
+    const handleOverlayMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
         if (!isPinMode) return;
         if (activePinId) {
             setActivePinId(null);
             return;
         }
         if (isAdding) return;
+        // Don't trigger if clicking on a comment or modal
+        if ((e.target as HTMLElement).closest('.comment-pin') || (e.target as HTMLElement).closest('.comment-modal')) return;
 
-        const rect = e.currentTarget.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width;
-        const y = (e.clientY - rect.top) / rect.height;
+        const overlay = e.currentTarget;
+        const rect = overlay.getBoundingClientRect();
+        const { clientX, clientY } = getClientCoordinates(e);
+        const x = (clientX - rect.left) / rect.width;
+        const y = (clientY - rect.top) / rect.height;
 
         setIsDragging(true);
         setDragStart({ x, y });
         setDragEnd({ x, y });
     };
 
-    const handleOverlayMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+    const handleOverlayMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
         if (!isDragging || !dragStart) return;
 
-        const rect = e.currentTarget.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width;
-        const y = (e.clientY - rect.top) / rect.height;
+        const overlay = e.currentTarget;
+        const rect = overlay.getBoundingClientRect();
+        const { clientX, clientY } = getClientCoordinates(e);
+        const x = (clientX - rect.left) / rect.width;
+        const y = (clientY - rect.top) / rect.height;
 
         setDragEnd({ x, y });
     };
@@ -113,7 +139,7 @@ export function AnnotationCanvas({
     };
 
     // Handle moving existing comments
-    const handleCommentMouseDown = (e: MouseEvent, commentId: string, comment: Comment) => {
+    const handleCommentMouseDown = (e: React.MouseEvent | React.TouchEvent, commentId: string, comment: Comment) => {
         if (!isPinMode) return;
         e.stopPropagation();
 
@@ -122,22 +148,24 @@ export function AnnotationCanvas({
         if (!overlay) return;
 
         const rect = overlay.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width;
-        const y = (e.clientY - rect.top) / rect.height;
+        const { clientX, clientY } = getClientCoordinates(e);
+        const x = (clientX - rect.left) / rect.width;
+        const y = (clientY - rect.top) / rect.height;
 
         setMovingCommentId(commentId);
         setMoveStart({ x, y });
     };
 
-    const handleCommentMouseMove = (e: MouseEvent) => {
+    const handleCommentMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
         if (!movingCommentId || !moveStart || !onUpdateComment) return;
 
         const comment = comments.find(c => c.id === movingCommentId);
         if (!comment) return;
 
         const rect = e.currentTarget.getBoundingClientRect();
-        const currentX = (e.clientX - rect.left) / rect.width;
-        const currentY = (e.clientY - rect.top) / rect.height;
+        const { clientX, clientY } = getClientCoordinates(e);
+        const currentX = (clientX - rect.left) / rect.width;
+        const currentY = (clientY - rect.top) / rect.height;
 
         const deltaX = currentX - moveStart.x;
         const deltaY = currentY - moveStart.y;
@@ -157,7 +185,7 @@ export function AnnotationCanvas({
     };
 
     // Handle resizing areas
-    const handleResizeMouseDown = (e: MouseEvent, commentId: string, comment: Comment, handle: 'tl' | 'tr' | 'bl' | 'br') => {
+    const handleResizeMouseDown = (e: React.MouseEvent | React.TouchEvent, commentId: string, comment: Comment, handle: 'tl' | 'tr' | 'bl' | 'br') => {
         if (!isPinMode || !comment.width || !comment.height) return;
         e.stopPropagation();
 
@@ -166,8 +194,9 @@ export function AnnotationCanvas({
         if (!overlay) return;
 
         const rect = overlay.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width;
-        const y = (e.clientY - rect.top) / rect.height;
+        const { clientX, clientY } = getClientCoordinates(e);
+        const x = (clientX - rect.left) / rect.width;
+        const y = (clientY - rect.top) / rect.height;
 
         setResizingCommentId(commentId);
         setResizeHandle(handle);
@@ -439,13 +468,24 @@ export function AnnotationCanvas({
                         className="annotation-overlay absolute inset-0 w-full h-full z-20"
                         style={{ cursor: isPinMode ? 'crosshair' : 'default' }}
                         onMouseDown={handleOverlayMouseDown}
+                        onTouchStart={handleOverlayMouseDown}
                         onMouseMove={(e) => {
                             handleOverlayMouseMove(e);
                             handleCommentMouseMove(e);
-                            handleResizeMouseMove(e);
+                            handleResizeMouseMove(e as any);
+                        }}
+                        onTouchMove={(e) => {
+                            handleOverlayMouseMove(e);
+                            handleCommentMouseMove(e);
+                            handleResizeMouseMove(e as any);
                         }}
                         onMouseUp={(e) => {
                             handleOverlayMouseUp(e);
+                            handleCommentMouseUp();
+                            handleResizeMouseUp();
+                        }}
+                        onTouchEnd={(e) => {
+                            handleOverlayMouseUp(e as any);
                             handleCommentMouseUp();
                             handleResizeMouseUp();
                         }}
@@ -495,18 +535,22 @@ export function AnnotationCanvas({
                                                 e.stopPropagation();
                                                 handleCommentMouseDown(e, comment.id, comment);
                                             }}
+                                            onTouchStart={(e) => {
+                                                e.stopPropagation();
+                                                handleCommentMouseDown(e, comment.id, comment);
+                                            }}
                                             style={{ pointerEvents: 'auto' }}
                                         >
                                             <div className="relative">
                                                 {/* White outline */}
                                                 <MapPin
-                                                    className="absolute h-8 w-8 text-white fill-white"
+                                                    className="absolute w-6 h-6 md:w-8 md:h-8 text-white fill-white"
                                                     style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}
                                                 />
                                                 {/* Colored pin on top */}
                                                 <MapPin
                                                     className={cn(
-                                                        "w-8 h-8 drop-shadow-lg",
+                                                        "w-6 h-6 md:w-8 md:h-8 drop-shadow-lg",
                                                         comment.status === "completed"
                                                             ? "text-gray-500 fill-gray-500"
                                                             : comment.status === "in-progress"
@@ -531,6 +575,10 @@ export function AnnotationCanvas({
                                                         e.stopPropagation();
                                                         handleResizeMouseDown(e, comment.id, comment, 'tl');
                                                     }}
+                                                    onTouchStart={(e) => {
+                                                        e.stopPropagation();
+                                                        handleResizeMouseDown(e, comment.id, comment, 'tl');
+                                                    }}
                                                     onClick={(e) => e.stopPropagation()}
                                                 />
                                                 {/* Top-right */}
@@ -541,6 +589,10 @@ export function AnnotationCanvas({
                                                         boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                                                     }}
                                                     onMouseDown={(e) => {
+                                                        e.stopPropagation();
+                                                        handleResizeMouseDown(e, comment.id, comment, 'tr');
+                                                    }}
+                                                    onTouchStart={(e) => {
                                                         e.stopPropagation();
                                                         handleResizeMouseDown(e, comment.id, comment, 'tr');
                                                     }}
@@ -557,6 +609,10 @@ export function AnnotationCanvas({
                                                         e.stopPropagation();
                                                         handleResizeMouseDown(e, comment.id, comment, 'bl');
                                                     }}
+                                                    onTouchStart={(e) => {
+                                                        e.stopPropagation();
+                                                        handleResizeMouseDown(e, comment.id, comment, 'bl');
+                                                    }}
                                                     onClick={(e) => e.stopPropagation()}
                                                 />
                                                 {/* Bottom-right */}
@@ -567,6 +623,10 @@ export function AnnotationCanvas({
                                                         boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                                                     }}
                                                     onMouseDown={(e) => {
+                                                        e.stopPropagation();
+                                                        handleResizeMouseDown(e, comment.id, comment, 'br');
+                                                    }}
+                                                    onTouchStart={(e) => {
                                                         e.stopPropagation();
                                                         handleResizeMouseDown(e, comment.id, comment, 'br');
                                                     }}
@@ -724,15 +784,15 @@ export function AnnotationCanvas({
                                     >
                                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
                                             <div className="relative">
-                                                <MapPin className="absolute w-8 h-8 text-white fill-white" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
-                                                <MapPin className="w-8 h-8 text-red-500 fill-red-400 animate-bounce" />
+                                                <MapPin className="absolute w-6 h-6 md:w-8 md:h-8 text-white fill-white" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
+                                                <MapPin className="w-6 h-6 md:w-8 md:h-8 text-red-500 fill-red-400 animate-bounce" />
                                             </div>
                                         </div>
                                     </div>
                                 ) : (
                                     <div className="relative -translate-x-1/2 -translate-y-1/2" style={{ left: `${tempPin.x * 100}%`, top: `${tempPin.y * 100}%` }}>
-                                        <MapPin className="absolute h-10 w-10 text-white fill-white animate-bounce" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
-                                        <MapPin className="relative h-10 w-10 text-primary fill-primary animate-bounce" />
+                                        <MapPin className="absolute w-8 h-8 md:w-10 md:h-10 text-white fill-white animate-bounce" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
+                                        <MapPin className="relative w-8 h-8 md:w-10 md:h-10 text-primary fill-primary animate-bounce" />
                                     </div>
                                 )}
 
