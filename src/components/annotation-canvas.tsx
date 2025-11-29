@@ -364,33 +364,35 @@ export function AnnotationCanvas({
 
                     <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
                         <Button
-                            variant={viewport === "mobile" ? "default" : "ghost"}
+                            variant="ghost"
                             size="sm"
                             onClick={() => onViewportChange?.("mobile")}
                             className={cn(
-                                "h-7 px-3 text-xs gap-2",
-                                viewport === "mobile" && "font-semibold"
+                                "h-7 px-3 text-xs gap-2 transition-all",
+                                viewport === "mobile"
+                                    ? "bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                                    : "hover:bg-gray-200"
                             )}
                             title="Mobile (375px)"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2" /><path d="M12 18h.01" /></svg>
-                            SP <span className="opacity-70">(375px)</span>
+                            SP <span className={viewport === "mobile" ? "opacity-90" : "opacity-70"}>(375px)</span>
                         </Button>
                         <Button
-                            variant={viewport === "desktop" ? "default" : "ghost"}
+                            variant="ghost"
                             size="sm"
                             onClick={() => onViewportChange?.("desktop")}
                             className={cn(
-                                "h-7 px-3 text-xs gap-2",
-                                viewport === "desktop" && "font-semibold"
+                                "h-7 px-3 text-xs gap-2 transition-all",
+                                viewport === "desktop"
+                                    ? "bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                                    : "hover:bg-gray-200"
                             )}
                             title="Desktop (1280px)"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="3" rx="2" /><line x1="8" x2="16" y1="21" y2="21" /><line x1="12" x2="12" y1="17" y2="21" /></svg>
-                            PC <span className="opacity-70">(1280px)</span>
+                            PC <span className={viewport === "desktop" ? "opacity-90" : "opacity-70"}>(1280px)</span>
                         </Button>
-
-
                     </div>
                 </div>
             </div>
