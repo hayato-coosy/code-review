@@ -109,11 +109,30 @@ export default function SessionPage({ params }: SessionPageProps) {
         }
     };
 
+    const handleCanvasHeightChange = async (height: number) => {
+        if (!id || !session) return;
+
+        // Optimistic update
+        setSession({ ...session, canvasHeight: height });
+
+        try {
+            await fetch(`/api/sessions/${id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ canvasHeight: height }),
+            });
+        } catch (error) {
+            console.error(error);
+            // Revert on error if needed
+        }
+    };
+
     const handleCommentClick = (comment: Comment) => {
         // Scroll to the comment's position
         const scrollContainer = document.querySelector('.flex-1.overflow-auto');
         if (scrollContainer) {
-            const scrollPosition = comment.posY * 3000; // 3000px is the iframe container height
+            const height = session?.canvasHeight || 3000;
+            const scrollPosition = comment.posY * height;
             scrollContainer.scrollTo({
                 top: scrollPosition - 100, // Offset by 100px to show context above
                 behavior: 'smooth'
@@ -148,18 +167,22 @@ export default function SessionPage({ params }: SessionPageProps) {
     return (
         <div className="flex h-screen">
             <div className="flex-1 overflow-hidden">
-                <AnnotationCanvas
-                    targetUrl={session.targetUrl}
-                    comments={comments}
-                    onAddComment={handleAddComment}
-                    onUpdateComment={handleUpdateComment}
-                    isOverlayMode={isOverlayMode}
-                    activeCommentId={activeCommentId}
-                    onSetActiveComment={setActiveCommentId}
-                    viewport={viewport}
-                    onViewportChange={setViewport}
-                    onToggleOverlay={() => setIsOverlayMode(!isOverlayMode)}
-                />
+                <div className="relative z-10 h-full">
+                    <AnnotationCanvas
+                        targetUrl={session.targetUrl}
+                        comments={comments}
+                        onAddComment={handleAddComment}
+                        onUpdateComment={handleUpdateComment}
+                        isOverlayMode={isOverlayMode}
+                        activeCommentId={activeCommentId}
+                        onSetActiveComment={setActiveCommentId}
+                        viewport={viewport}
+                        onViewportChange={setViewport}
+                        onToggleOverlay={() => setIsOverlayMode(!isOverlayMode)}
+                        canvasHeight={session.canvasHeight}
+                        onCanvasHeightChange={handleCanvasHeightChange}
+                    />
+                </div>
             </div>
 
             <div className="relative z-20">

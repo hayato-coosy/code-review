@@ -1,7 +1,8 @@
-export type Session = {
+export interface Session {
     id: string;
     targetUrl: string;
     createdAt: string;
+    canvasHeight?: number;
 };
 
 export type Comment = {

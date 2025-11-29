@@ -4,7 +4,7 @@ import { useState, useRef, MouseEvent } from "react";
 import { Comment } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MapPin, X, PlusCircle, Eye, EyeOff } from "lucide-react";
+import { MapPin, X, PlusCircle, Eye, EyeOff, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AnnotationCanvasProps {
@@ -20,6 +20,8 @@ interface AnnotationCanvasProps {
     viewport?: "desktop" | "mobile";
     onViewportChange?: (viewport: "desktop" | "mobile") => void;
     onToggleOverlay?: () => void;
+    canvasHeight?: number;
+    onCanvasHeightChange?: (height: number) => void;
 }
 
 export function AnnotationCanvas({
@@ -30,9 +32,11 @@ export function AnnotationCanvas({
     isOverlayMode = false,
     activeCommentId = null,
     onSetActiveComment,
-    viewport = "desktop",
+    viewport,
     onViewportChange,
     onToggleOverlay,
+    canvasHeight,
+    onCanvasHeightChange,
 }: AnnotationCanvasProps) {
     const [isPinMode, setIsPinMode] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
@@ -325,30 +329,7 @@ export function AnnotationCanvas({
         };
     };
 
-    const [canvasHeight, setCanvasHeight] = useState(5000);
-    const [isResizingCanvas, setIsResizingCanvas] = useState(false);
-
-    const handleCanvasResizeStart = (e: React.MouseEvent) => {
-        e.preventDefault();
-        setIsResizingCanvas(true);
-
-        const startY = e.clientY;
-        const startHeight = canvasHeight;
-
-        const handleMouseMove = (moveEvent: globalThis.MouseEvent) => {
-            const deltaY = moveEvent.clientY - startY;
-            setCanvasHeight(Math.max(1000, startHeight + deltaY));
-        };
-
-        const handleMouseUp = () => {
-            setIsResizingCanvas(false);
-            document.removeEventListener("mousemove", handleMouseMove);
-            document.removeEventListener("mouseup", handleMouseUp);
-        };
-
-        document.addEventListener("mousemove", handleMouseMove);
-        document.addEventListener("mouseup", handleMouseUp);
-    };
+    const currentHeight = canvasHeight || 3000;
 
     return (
         <div className="flex h-full flex-col bg-gray-100">
@@ -421,7 +402,7 @@ export function AnnotationCanvas({
                         "relative mx-auto bg-white shadow-2xl transition-all duration-300 ease-in-out",
                         viewport === "mobile" ? "w-[375px]" : "w-[1280px]"
                     )}
-                    style={{ height: `${canvasHeight}px` }}
+                    style={{ height: `${currentHeight}px` }}
                 >
                     {/* Iframe */}
                     <iframe
@@ -439,13 +420,16 @@ export function AnnotationCanvas({
                         />
                     )}
 
-                    {/* Resize Handle */}
-                    <div
-                        className="absolute bottom-0 left-0 right-0 h-6 bg-gray-200 hover:bg-blue-500 cursor-ns-resize flex items-center justify-center transition-colors z-50 group"
-                        onMouseDown={handleCanvasResizeStart}
-                        title="ドラッグして高さを調整"
-                    >
-                        <div className="w-12 h-1 bg-gray-400 rounded-full group-hover:bg-white" />
+                    {/* Extend Height Button */}
+                    <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-8 pt-12 bg-gradient-to-t from-black/10 to-transparent pointer-events-none z-20">
+                        <Button
+                            variant="secondary"
+                            onClick={() => onCanvasHeightChange?.(currentHeight + 500)}
+                            className="gap-2 shadow-lg pointer-events-auto bg-white hover:bg-gray-100 border text-gray-700"
+                        >
+                            <ArrowDown className="h-4 w-4" />
+                            高さを増やす (+500px)
+                        </Button>
                     </div>
 
                     {/* Overlay */}

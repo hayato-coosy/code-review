@@ -11,11 +11,18 @@ export const store = {
                 id: Math.random().toString(36).substring(2, 9),
                 targetUrl,
                 createdAt: new Date().toISOString(),
+                canvasHeight: 3000,
             };
             sessions.push(newSession);
             return newSession;
         },
         getById: (id: string) => sessions.find((s) => s.id === id),
+        update: (id: string, data: Partial<Session>) => {
+            const index = sessions.findIndex((s) => s.id === id);
+            if (index === -1) return null;
+            sessions[index] = { ...sessions[index], ...data };
+            return sessions[index];
+        },
     },
     comments: {
         getBySessionId: (sessionId: string) =>
