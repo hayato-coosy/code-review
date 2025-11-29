@@ -6,7 +6,7 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { id } = await params;
-    const session = store.sessions.getById(id);
+    const session = await store.sessions.getById(id);
 
     if (!session) {
         return NextResponse.json({ error: "Session not found" }, { status: 404 });
@@ -24,7 +24,7 @@ export async function PATCH(
         const body = await request.json();
         const { canvasHeight } = body;
 
-        const updated = store.sessions.update(id, { canvasHeight });
+        const updated = await store.sessions.update(id, { canvasHeight });
         if (!updated) {
             return NextResponse.json({ error: "Session not found" }, { status: 404 });
         }

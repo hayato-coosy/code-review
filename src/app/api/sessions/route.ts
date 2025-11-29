@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const session = store.sessions.create(targetUrl);
+        const session = await store.sessions.create(targetUrl);
         return NextResponse.json(session, { status: 201 });
     } catch (error) {
         return NextResponse.json(

@@ -6,7 +6,7 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { id } = await params;
-    const comments = store.comments.getBySessionId(id);
+    const comments = await store.comments.getBySessionId(id);
     return NextResponse.json({ comments });
 }
 
@@ -26,7 +26,7 @@ export async function POST(
             );
         }
 
-        const comment = store.comments.create({
+        const comment = await store.comments.create({
             sessionId: id,
             message,
             authorName,
@@ -76,7 +76,7 @@ export async function PATCH(
         if (category !== undefined) updates.category = category;
         if (status !== undefined) updates.status = status;
 
-        const updated = store.comments.update(commentId, updates as Partial<Comment>);
+        const updated = await store.comments.update(commentId, updates as Partial<Comment>);
         if (!updated) {
             console.error("Comment not found:", commentId);
             return NextResponse.json({ error: "Comment not found" }, { status: 404 });
