@@ -441,7 +441,7 @@ export function AnnotationCanvas({
 
                     {/* Resize Handle */}
                     <div
-                        className="absolute bottom-0 left-0 right-0 h-6 bg-gray-200 hover:bg-blue-500 cursor-ns-resize flex items-center justify-center transition-colors z-20 group"
+                        className="absolute bottom-0 left-0 right-0 h-6 bg-gray-200 hover:bg-blue-500 cursor-ns-resize flex items-center justify-center transition-colors z-50 group"
                         onMouseDown={handleCanvasResizeStart}
                         title="ドラッグして高さを調整"
                     >
