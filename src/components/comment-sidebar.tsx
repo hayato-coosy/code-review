@@ -240,16 +240,19 @@ export function CommentSidebar({
                                         <select
                                             className={cn(
                                                 "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1 bg-transparent",
-                                                comment.category === "coding"
-                                                    ? "bg-emerald-900/30 text-emerald-300 hover:bg-emerald-900/50"
-                                                    : "bg-orange-900/30 text-orange-300 hover:bg-orange-900/50"
+                                                comment.status === "completed"
+                                                    ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                                                    : comment.status === "in-progress"
+                                                        ? "bg-blue-900/30 text-blue-300 hover:bg-blue-900/50"
+                                                        : "bg-red-900/30 text-red-300 hover:bg-red-900/50"
                                             )}
-                                            value={comment.category}
-                                            onChange={(e) => onUpdateComment?.(comment.id, { category: e.target.value as any })}
+                                            value={comment.status}
+                                            onChange={(e) => onUpdateComment?.(comment.id, { status: e.target.value as any })}
                                             onClick={(e) => e.stopPropagation()}
                                         >
-                                            <option value="coding" className="bg-[#333]">コーディング</option>
-                                            <option value="design" className="bg-[#333]">デザイン</option>
+                                            <option value="pending" className="bg-[#333]">未対応</option>
+                                            <option value="in-progress" className="bg-[#333]">対応中</option>
+                                            <option value="completed" className="bg-[#333]">完了</option>
                                         </select>
                                     </div>
                                     <div className="flex items-center justify-between text-xs text-gray-400">

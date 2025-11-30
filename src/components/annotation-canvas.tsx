@@ -57,7 +57,6 @@ export function AnnotationCanvas({
     // For moving existing pins/areas
     // For moving existing pins/areas
     const [movingCommentId, setMovingCommentId] = useState<string | null>(null);
-    const [tempMove, setTempMove] = useState<{ x: number; y: number } | null>(null);
 
     // Refs for performance (avoiding getBoundingClientRect on every move)
     const dragInfoRef = useRef<{
@@ -66,12 +65,13 @@ export function AnnotationCanvas({
         initialCommentX: number;
         initialCommentY: number;
         overlayRect: DOMRect;
+        currentX: number;
+        currentY: number;
     } | null>(null);
 
     // For resizing areas
     const [resizingCommentId, setResizingCommentId] = useState<string | null>(null);
     const [resizeHandle, setResizeHandle] = useState<'tl' | 'tr' | 'bl' | 'br' | null>(null);
-    const [tempResize, setTempResize] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
 
     const resizeInfoRef = useRef<{
         startX: number;
@@ -81,6 +81,10 @@ export function AnnotationCanvas({
         initialWidth: number;
         initialHeight: number;
         overlayRect: DOMRect;
+        currentX: number;
+        currentY: number;
+        currentWidth: number;
+        currentHeight: number;
     } | null>(null);
 
     // Helper to get coordinates from mouse or touch event
@@ -188,12 +192,13 @@ export function AnnotationCanvas({
             startY: clientY,
             initialCommentX: comment.posX,
             initialCommentY: comment.posY,
-            overlayRect: rect
+            overlayRect: rect,
+            currentX: comment.posX,
+            currentY: comment.posY
         };
         console.log('Drag info set:', dragInfoRef.current);
 
         setMovingCommentId(commentId);
-        setTempMove({ x: comment.posX, y: comment.posY });
     };
 
     const handleCommentMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
@@ -211,22 +216,29 @@ export function AnnotationCanvas({
         const deltaX = (clientX - startX) / overlayRect.width;
         const deltaY = (clientY - startY) / overlayRect.height;
 
-        // Update local temp state
-        setTempMove({
-            x: initialCommentX + deltaX,
-            y: initialCommentY + deltaY,
-        });
+        const newX = initialCommentX + deltaX;
+        const newY = initialCommentY + deltaY;
+
+        // Update ref
+        dragInfoRef.current.currentX = newX;
+        dragInfoRef.current.currentY = newY;
+
+        // Direct DOM update
+        const el = document.getElementById(`comment-${movingCommentId}`);
+        if (el) {
+            el.style.left = `${newX * 100}%`;
+            el.style.top = `${newY * 100}%`;
+        }
     };
 
     const handleCommentMouseUp = () => {
-        if (movingCommentId && tempMove && onUpdateComment) {
+        if (movingCommentId && dragInfoRef.current && onUpdateComment) {
             onUpdateComment(movingCommentId, {
-                posX: tempMove.x,
-                posY: tempMove.y,
+                posX: dragInfoRef.current.currentX,
+                posY: dragInfoRef.current.currentY,
             });
         }
         setMovingCommentId(null);
-        setTempMove(null);
         dragInfoRef.current = null;
     };
 
@@ -249,17 +261,15 @@ export function AnnotationCanvas({
             initialY: comment.posY,
             initialWidth: comment.width,
             initialHeight: comment.height,
-            overlayRect: rect
+            overlayRect: rect,
+            currentX: comment.posX,
+            currentY: comment.posY,
+            currentWidth: comment.width,
+            currentHeight: comment.height
         };
 
         setResizingCommentId(commentId);
         setResizeHandle(handle);
-        setTempResize({
-            x: comment.posX,
-            y: comment.posY,
-            width: comment.width,
-            height: comment.height,
-        });
     };
 
     const handleResizeMouseMove = (e: MouseEvent) => {
@@ -297,27 +307,32 @@ export function AnnotationCanvas({
 
         // Ensure minimum size
         if (newWidth > 0.02 && newHeight > 0.02) {
-            setTempResize({
-                x: newPosX,
-                y: newPosY,
-                width: newWidth,
-                height: newHeight,
-            });
+            resizeInfoRef.current.currentX = newPosX;
+            resizeInfoRef.current.currentY = newPosY;
+            resizeInfoRef.current.currentWidth = newWidth;
+            resizeInfoRef.current.currentHeight = newHeight;
+
+            const el = document.getElementById(`comment-${resizingCommentId}`);
+            if (el) {
+                el.style.left = `${newPosX * 100}%`;
+                el.style.top = `${newPosY * 100}%`;
+                el.style.width = `${newWidth * 100}%`;
+                el.style.height = `${newHeight * 100}%`;
+            }
         }
     };
 
     const handleResizeMouseUp = () => {
-        if (resizingCommentId && tempResize && onUpdateComment) {
+        if (resizingCommentId && resizeInfoRef.current && onUpdateComment) {
             onUpdateComment(resizingCommentId, {
-                posX: tempResize.x,
-                posY: tempResize.y,
-                width: tempResize.width,
-                height: tempResize.height,
+                posX: resizeInfoRef.current.currentX,
+                posY: resizeInfoRef.current.currentY,
+                width: resizeInfoRef.current.currentWidth,
+                height: resizeInfoRef.current.currentHeight,
             });
         }
         setResizingCommentId(null);
         setResizeHandle(null);
-        setTempResize(null);
         resizeInfoRef.current = null;
     };
 
@@ -550,45 +565,48 @@ export function AnnotationCanvas({
                         {/* Drag selection rectangle */}
                         {isDragging && dragStart && dragEnd && (
                             <div
-                                className="absolute border-4 border-dashed pointer-events-none"
+                                className="absolute border-2 border-solid pointer-events-none bg-blue-500/10"
                                 style={{
                                     left: `${Math.min(dragStart.x, dragEnd.x) * 100}%`,
                                     top: `${Math.min(dragStart.y, dragEnd.y) * 100}%`,
                                     width: `${Math.abs(dragEnd.x - dragStart.x) * 100}%`,
                                     height: `${Math.abs(dragEnd.y - dragStart.y) * 100}%`,
                                     borderColor: '#3b82f6',
-                                    boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.8), 0 0 0 4px #3b82f6',
                                 }}
                             />
                         )}
 
                         {/* Existing Pins and Areas */}
                         {visibleComments.map((comment) => {
-                            // Use local temp state if this comment is being moved or resized
-                            const isMoving = movingCommentId === comment.id && tempMove;
-                            const isResizing = resizingCommentId === comment.id && tempResize;
+                            const isMoving = movingCommentId === comment.id;
+                            const isResizing = resizingCommentId === comment.id;
 
-                            const posX = isMoving ? tempMove!.x : (isResizing ? tempResize!.x : comment.posX);
-                            const posY = isMoving ? tempMove!.y : (isResizing ? tempResize!.y : comment.posY);
-                            const width = isResizing ? tempResize!.width : comment.width;
-                            const height = isResizing ? tempResize!.height : comment.height;
+                            const posX = comment.posX;
+                            const posY = comment.posY;
+                            const width = comment.width;
+                            const height = comment.height;
+
+                            const statusColor = comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#3b82f6" : "#ef4444";
+                            const statusBg = comment.status === "completed" ? "rgba(156, 163, 175, 0.1)" : comment.status === "in-progress" ? "rgba(59, 130, 246, 0.1)" : "rgba(239, 68, 68, 0.1)";
 
                             return (
                                 <div key={comment.id}>
                                     {width && height ? (
                                         // Area selection with resize handles
                                         <div
+                                            id={`comment-${comment.id}`}
                                             className={cn(
-                                                "absolute border-4 border-dashed cursor-pointer pointer-events-auto",
-                                                resizingCommentId === comment.id && "border-[6px]"
+                                                "absolute border-2 border-solid cursor-pointer pointer-events-auto transition-colors",
+                                                resizingCommentId === comment.id && "border-[3px]"
                                             )}
                                             style={{
                                                 left: `${posX * 100}%`,
                                                 top: `${posY * 100}%`,
                                                 width: `${width * 100}%`,
                                                 height: `${height * 100}%`,
-                                                borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1",
-                                                boxShadow: `0 0 0 2px rgba(255, 255, 255, 0.8), 0 0 0 4px ${comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1"}`,
+                                                borderColor: statusColor,
+                                                backgroundColor: statusBg,
+                                                boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.5)',
                                             }}
                                             onClick={(e) => {
                                                 e.stopPropagation();
@@ -619,10 +637,10 @@ export function AnnotationCanvas({
                                                         className={cn(
                                                             "w-6 h-6 md:w-8 md:h-8 drop-shadow-lg",
                                                             comment.status === "completed"
-                                                                ? "text-gray-500 fill-gray-500"
+                                                                ? "text-gray-400 fill-gray-400"
                                                                 : comment.status === "in-progress"
-                                                                    ? "text-sky-500 fill-sky-500"
-                                                                    : "text-slate-400 fill-slate-400"
+                                                                    ? "text-blue-500 fill-blue-500"
+                                                                    : "text-red-500 fill-red-500"
                                                         )}
                                                     />
                                                 </div>
@@ -635,7 +653,7 @@ export function AnnotationCanvas({
                                                     <div
                                                         className="absolute -left-2 -top-2 w-5 h-5 bg-white border-2 cursor-nwse-resize z-10 hover:scale-125 transition-transform rounded-full"
                                                         style={{
-                                                            borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1",
+                                                            borderColor: statusColor,
                                                             boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                                                         }}
                                                         onMouseDown={(e) => {
@@ -652,7 +670,7 @@ export function AnnotationCanvas({
                                                     <div
                                                         className="absolute -right-2 -top-2 w-5 h-5 bg-white border-2 cursor-nesw-resize z-10 hover:scale-125 transition-transform rounded-full"
                                                         style={{
-                                                            borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1",
+                                                            borderColor: statusColor,
                                                             boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                                                         }}
                                                         onMouseDown={(e) => {
@@ -669,7 +687,7 @@ export function AnnotationCanvas({
                                                     <div
                                                         className="absolute -left-2 -bottom-2 w-5 h-5 bg-white border-2 cursor-nesw-resize z-10 hover:scale-125 transition-transform rounded-full"
                                                         style={{
-                                                            borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1",
+                                                            borderColor: statusColor,
                                                             boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                                                         }}
                                                         onMouseDown={(e) => {
@@ -703,7 +721,7 @@ export function AnnotationCanvas({
                                             )}
 
                                             {activePinId === comment.id && (
-                                                <div className="absolute left-0 top-full z-10 mt-2 w-80 rounded-lg border bg-white p-5 shadow-xl" style={{ borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1" }}>
+                                                <div className="absolute left-0 top-full z-10 mt-2 w-80 rounded-lg border bg-white p-5 shadow-xl" style={{ borderColor: statusColor }}>
                                                     <div className="mb-4 flex items-center justify-between gap-2">
                                                         <select
                                                             className={cn(
@@ -749,6 +767,7 @@ export function AnnotationCanvas({
                                     ) : (
                                         // Pin only - with white outline for visibility
                                         <div
+                                            id={`comment-${comment.id}`}
                                             className={cn(
                                                 "absolute -translate-x-1/2 -translate-y-1/2 pointer-events-auto",
                                                 movingCommentId === comment.id && "scale-125"
@@ -783,15 +802,15 @@ export function AnnotationCanvas({
                                                     className={cn(
                                                         "absolute inset-0 h-10 w-10 transition-transform hover:scale-110 pointer-events-none",
                                                         comment.status === "completed"
-                                                            ? "text-gray-500 fill-gray-500"
+                                                            ? "text-gray-400 fill-gray-400"
                                                             : comment.status === "in-progress"
-                                                                ? "text-sky-500 fill-sky-500"
-                                                                : "text-slate-400 fill-slate-400"
+                                                                ? "text-blue-500 fill-blue-500"
+                                                                : "text-red-500 fill-red-500"
                                                     )}
                                                 />
                                             </div>
                                             {activePinId === comment.id && (
-                                                <div className="absolute left-1/2 top-full z-10 mt-2 w-72 -translate-x-1/2 rounded-lg border bg-white p-4 shadow-xl" style={{ borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1" }}>
+                                                <div className="absolute left-1/2 top-full z-10 mt-2 w-72 -translate-x-1/2 rounded-lg border bg-white p-4 shadow-xl" style={{ borderColor: statusColor }}>
                                                     <div className="mb-3 flex items-center justify-between gap-2">
                                                         <select
                                                             className={cn(
