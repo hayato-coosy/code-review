@@ -112,15 +112,37 @@ export default function SessionPage({ params }: SessionPageProps) {
     const handleCanvasHeightChange = async (height: number) => {
         if (!id || !session) return;
 
-        // Optimistic update
+        const oldHeight = session.canvasHeight || 800;
+        const newHeight = height;
+        const scaleFactor = oldHeight / newHeight;
+
+        // Optimistic update session
         setSession({ ...session, canvasHeight: height });
 
+        // Optimistic update comments
+        const updatedComments = comments.map(c => ({
+            ...c,
+            posY: c.posY * scaleFactor
+        }));
+        setComments(updatedComments);
+
         try {
+            // Save session height
             await fetch(`/api/sessions/${id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ canvasHeight: height }),
             });
+
+            // Save all updated comments
+            // Note: In a production app, we should use a bulk update endpoint
+            await Promise.all(updatedComments.map(c =>
+                fetch(`/api/sessions/${id}/comments`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ commentId: c.id, posY: c.posY }),
+                })
+            ));
         } catch (error) {
             console.error(error);
             // Revert on error if needed

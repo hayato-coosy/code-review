@@ -715,7 +715,7 @@ export function AnnotationCanvas({
         }
     };
 
-    const currentHeight = canvasHeight || 3000;
+    const currentHeight = canvasHeight || 800;
 
     return (
         <div className="flex h-full flex-col bg-gray-100">
