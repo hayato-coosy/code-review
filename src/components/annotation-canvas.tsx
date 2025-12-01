@@ -626,25 +626,27 @@ export function AnnotationCanvas({
                         />
                     )}
 
-                    {/* Dark overlay when overlay mode is on */}
-                    {isOverlayMode && (
+                    {/* Dark overlay when overlay mode is on or in image mode */}
+                    {(isOverlayMode || isImageMode) && (
                         <div
                             className="absolute inset-0 w-full h-full pointer-events-none z-10"
                             style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
                         />
                     )}
 
-                    {/* Extend Height Button */}
-                    <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-8 pt-12 bg-gradient-to-t from-black/10 to-transparent pointer-events-none z-50">
-                        <Button
-                            variant="secondary"
-                            onClick={() => onCanvasHeightChange?.(currentHeight + 500)}
-                            className="gap-2 shadow-lg pointer-events-auto bg-white hover:bg-gray-100 border text-gray-700"
-                        >
-                            <ArrowDown className="h-4 w-4" />
-                            高さを増やす (+500px)
-                        </Button>
-                    </div>
+                    {/* Extend Height Button - Hidden in image mode */}
+                    {!isImageMode && (
+                        <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-8 pt-12 bg-gradient-to-t from-black/10 to-transparent pointer-events-none z-50">
+                            <Button
+                                variant="secondary"
+                                onClick={() => onCanvasHeightChange?.(currentHeight + 500)}
+                                className="gap-2 shadow-lg pointer-events-auto bg-white hover:bg-gray-100 border text-gray-700"
+                            >
+                                <ArrowDown className="h-4 w-4" />
+                                高さを増やす (+500px)
+                            </Button>
+                        </div>
+                    )}
 
                     {/* Overlay */}
                     <div
