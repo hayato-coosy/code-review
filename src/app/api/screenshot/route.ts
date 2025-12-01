@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
         microlinkApiUrl.searchParams.set('viewport.height', height.toString());
         microlinkApiUrl.searchParams.set('viewport.deviceScaleFactor', '2');
         microlinkApiUrl.searchParams.set('fullPage', 'true');
-        microlinkApiUrl.searchParams.set('headers.Accept-Language', 'ja');
+        // microlinkApiUrl.searchParams.set('headers.Accept-Language', 'ja'); // Requires Pro plan
         // Microlink doesn't support time_zone directly in free tier easily without overlay, 
         // but Accept-Language is key for fonts.
 
