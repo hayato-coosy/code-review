@@ -228,7 +228,7 @@ export function AnnotationToolbar({
             {/* Helper Text */}
             {mode === "screenshot" && !hasDesktopScreenshot && !hasMobileScreenshot && (
                 <div className="px-4 py-2 bg-blue-600 text-white text-xs font-medium rounded-full shadow-lg animate-bounce">
-                    👆 まずは画像をアップロードするか、自動撮影してください
+                    まずは画像をアップロードするか、自動撮影してください
                 </div>
             )}
         </div>
