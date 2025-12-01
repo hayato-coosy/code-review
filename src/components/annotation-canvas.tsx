@@ -87,6 +87,8 @@ export function AnnotationCanvas({
             const desktopData = await desktopRes.json();
             const mobileData = await mobileRes.json();
 
+            // alert('スクリーンショット取得完了。アップロードを開始します...');
+
             // Upload screenshots to Supabase
             const [desktopUploadRes, mobileUploadRes] = await Promise.all([
                 fetch('/api/screenshot/upload', {
@@ -101,6 +103,8 @@ export function AnnotationCanvas({
                 })
             ]);
 
+            // alert(`アップロード完了: Desktop=${desktopUploadRes.status}, Mobile=${mobileUploadRes.status}`);
+
             let desktopUrl = desktopData.screenshot;
             let mobileUrl = mobileData.screenshot;
 
@@ -110,16 +114,20 @@ export function AnnotationCanvas({
                 desktopUrl = desktopUploadData.url;
                 mobileUrl = mobileUploadData.url;
 
+                // alert(`URL取得: ${desktopUrl?.slice(0, 20)}...`);
+
                 // Update session with public URLs
                 if (onUpdateSession) {
                     await onUpdateSession({
                         screenshotDesktopUrl: desktopUrl,
                         screenshotMobileUrl: mobileUrl
                     });
+                    // alert('セッション更新リクエスト送信完了');
                 }
             } else {
                 console.error('Failed to upload screenshots to storage');
-                alert('画像の保存に失敗しました。共有機能が正しく動作しない可能性があります。');
+                const errorText = await desktopUploadRes.text();
+                alert(`画像の保存に失敗しました: ${desktopUploadRes.status} ${errorText}`);
             }
 
             setScreenshots({
