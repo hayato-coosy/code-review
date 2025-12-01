@@ -55,6 +55,17 @@ export function AnnotationCanvas({
     });
     const [isTakingScreenshot, setIsTakingScreenshot] = useState(false);
 
+    // Sync state with props when they change (e.g. after initial load or re-fetch)
+    useEffect(() => {
+        if (screenshotDesktopUrl || screenshotMobileUrl) {
+            setScreenshots(prev => ({
+                desktop: screenshotDesktopUrl ? { url: screenshotDesktopUrl, height: prev.desktop?.height || 0 } : prev.desktop,
+                mobile: screenshotMobileUrl ? { url: screenshotMobileUrl, height: prev.mobile?.height || 0 } : prev.mobile
+            }));
+            setIsImageMode(true);
+        }
+    }, [screenshotDesktopUrl, screenshotMobileUrl]);
+
     const handleTakeScreenshot = async () => {
         setIsTakingScreenshot(true);
         try {
@@ -108,6 +119,7 @@ export function AnnotationCanvas({
                 }
             } else {
                 console.error('Failed to upload screenshots to storage');
+                alert('画像の保存に失敗しました。共有機能が正しく動作しない可能性があります。');
             }
 
             setScreenshots({
