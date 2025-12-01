@@ -601,939 +601,938 @@ export function AnnotationCanvas({
         };
     };
 
-    const desktopFileInputRef = useRef<HTMLInputElement>(null);
-    const mobileFileInputRef = useRef<HTMLInputElement>(null);
+};
 
-    const compressImage = async (file: File, maxWidth = 3840, quality = 0.85): Promise<Blob> => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let width = img.width;
-                    let height = img.height;
+const compressImage = async (file: File, maxWidth = 3840, quality = 0.85): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
 
-                    // Resize if too large
-                    if (width > maxWidth) {
-                        height = (height * maxWidth) / width;
-                        width = maxWidth;
-                    }
+                // Resize if too large
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
 
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    if (!ctx) {
-                        reject(new Error('Failed to get canvas context'));
-                        return;
-                    }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    reject(new Error('Failed to get canvas context'));
+                    return;
+                }
 
-                    ctx.drawImage(img, 0, 0, width, height);
+                ctx.drawImage(img, 0, 0, width, height);
 
-                    canvas.toBlob(
-                        (blob) => {
-                            if (blob) {
-                                resolve(blob);
-                            } else {
-                                reject(new Error('Failed to compress image'));
-                            }
-                        },
-                        file.type.includes('png') ? 'image/png' : 'image/jpeg',
-                        quality
-                    );
-                };
-                img.onerror = () => reject(new Error('Failed to load image'));
-                img.src = e.target?.result as string;
+                canvas.toBlob(
+                    (blob) => {
+                        if (blob) {
+                            resolve(blob);
+                        } else {
+                            reject(new Error('Failed to compress image'));
+                        }
+                    },
+                    file.type.includes('png') ? 'image/png' : 'image/jpeg',
+                    quality
+                );
             };
-            reader.onerror = () => reject(new Error('Failed to read file'));
-            reader.readAsDataURL(file);
+            img.onerror = () => reject(new Error('Failed to load image'));
+            img.src = e.target?.result as string;
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+    });
+};
+
+const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, folder: 'desktop' | 'mobile') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsTakingScreenshot(true);
+    try {
+        // Compress image before upload
+        console.log('Original file size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
+        const compressedBlob = await compressImage(file);
+        console.log('Compressed file size:', (compressedBlob.size / 1024 / 1024).toFixed(2), 'MB');
+
+        // Get Signed Upload URL
+        const setupRes = await fetch('/api/screenshot/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ folder, fileType: file.type })
         });
-    };
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, folder: 'desktop' | 'mobile') => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+        if (!setupRes.ok) throw new Error('Failed to get upload URL');
+        const setupData = await setupRes.json();
 
-        setIsTakingScreenshot(true);
-        try {
-            // Compress image before upload
-            console.log('Original file size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
-            const compressedBlob = await compressImage(file);
-            console.log('Compressed file size:', (compressedBlob.size / 1024 / 1024).toFixed(2), 'MB');
+        // Upload to Supabase
+        const uploadRes = await fetch(setupData.signedUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': file.type },
+            body: compressedBlob
+        });
 
-            // Get Signed Upload URL
-            const setupRes = await fetch('/api/screenshot/upload', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ folder, fileType: file.type })
+        if (!uploadRes.ok) {
+            const errorText = await uploadRes.text();
+            console.error('Upload failed:', {
+                status: uploadRes.status,
+                statusText: uploadRes.statusText,
+                error: errorText,
+                url: setupData.signedUrl
             });
-
-            if (!setupRes.ok) throw new Error('Failed to get upload URL');
-            const setupData = await setupRes.json();
-
-            // Upload to Supabase
-            const uploadRes = await fetch(setupData.signedUrl, {
-                method: 'PUT',
-                headers: { 'Content-Type': file.type },
-                body: compressedBlob
-            });
-
-            if (!uploadRes.ok) {
-                const errorText = await uploadRes.text();
-                console.error('Upload failed:', {
-                    status: uploadRes.status,
-                    statusText: uploadRes.statusText,
-                    error: errorText,
-                    url: setupData.signedUrl
-                });
-                throw new Error(`Failed to upload file: ${uploadRes.status} ${errorText}`);
-            }
-
-            const publicUrl = setupData.publicUrl;
-
-            // Update session
-            if (onUpdateSession) {
-                await onUpdateSession({
-                    [folder === 'desktop' ? 'screenshotDesktopUrl' : 'screenshotMobileUrl']: publicUrl
-                });
-            }
-
-            // Update local state
-            setScreenshots(prev => ({
-                ...prev,
-                [folder]: { url: publicUrl, height: 0 }
-            }));
-            setIsImageMode(true);
-            if (onViewportChange) {
-                onViewportChange(folder);
-            }
-
-        } catch (error) {
-            console.error('Upload error:', error);
-            alert('画像のアップロードに失敗しました。');
-        } finally {
-            setIsTakingScreenshot(false);
-            if (e.target) e.target.value = '';
+            throw new Error(`Failed to upload file: ${uploadRes.status} ${errorText}`);
         }
-    };
 
-    const currentHeight = canvasHeight || 3000;
+        const publicUrl = setupData.publicUrl;
 
-    return (
-        <div className="flex h-full flex-col bg-gray-100">
-            {/* Toolbar */}
-            <div className="flex items-center justify-between border-b bg-white px-6 py-3 shadow-sm z-30">
-                <div className="flex items-center gap-4">
-                    <Button
-                        variant={isPinMode ? "default" : "outline"}
-                        size="default"
-                        onClick={() => setIsPinMode(!isPinMode)}
-                        className="gap-2"
-                    >
-                        <PlusCircle className="h-5 w-5" />
-                        {isPinMode ? "ピンモード: ON" : "ピンモード: OFF"}
-                    </Button>
+        // Update session
+        if (onUpdateSession) {
+            await onUpdateSession({
+                [folder === 'desktop' ? 'screenshotDesktopUrl' : 'screenshotMobileUrl']: publicUrl
+            });
+        }
 
-                    <Button
-                        variant={isImageMode ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => {
-                            if (!screenshots.desktop && !isImageMode) {
-                                handleTakeScreenshot();
-                            } else {
-                                setIsImageMode(!isImageMode);
-                            }
-                        }}
-                        disabled={isTakingScreenshot}
-                        className="gap-2"
-                    >
-                        {isTakingScreenshot ? (
-                            <span className="animate-spin">⌛</span>
-                        ) : (
-                            <span className="text-lg">📷</span>
-                        )}
-                        {isImageMode ? "画像モード: ON" : "画像モード: OFF"}
-                    </Button>
+        // Update local state
+        setScreenshots(prev => ({
+            ...prev,
+            [folder]: { url: publicUrl, height: 0 }
+        }));
+        setIsImageMode(true);
+        if (onViewportChange) {
+            onViewportChange(folder);
+        }
 
-                    <input
-                        type="file"
-                        ref={desktopFileInputRef}
-                        className="hidden"
-                        accept="image/*"
-                        onChange={(e) => handleFileUpload(e, 'desktop')}
-                    />
-                    <input
-                        type="file"
-                        ref={mobileFileInputRef}
-                        className="hidden"
-                        accept="image/*"
-                        onChange={(e) => handleFileUpload(e, 'mobile')}
-                    />
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => desktopFileInputRef.current?.click()}
-                        disabled={isTakingScreenshot}
-                        className="gap-1 text-xs"
-                        title="Upload Desktop Screenshot"
-                    >
-                        📤 PC
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => mobileFileInputRef.current?.click()}
-                        disabled={isTakingScreenshot}
-                        className="gap-1 text-xs"
-                        title="Upload Mobile Screenshot"
-                    >
-                        📤 SP
-                    </Button>
+    } catch (error) {
+        console.error('Upload error:', error);
+        alert('画像のアップロードに失敗しました。');
+    } finally {
+        setIsTakingScreenshot(false);
+        if (e.target) e.target.value = '';
+    }
+};
 
-                    <span className="text-sm text-muted-foreground">
-                        {isPinMode ? "クリックまたはドラッグでコメントを追加・移動" : "閲覧モード"}
-                    </span>
-                </div>
+const currentHeight = canvasHeight || 3000;
 
-                <div className="flex items-center gap-2">
-                    {/* ... existing buttons ... */}
-                    <Button
-                        variant={isOverlayMode ? "default" : "outline"}
-                        size="sm"
-                        onClick={onToggleOverlay}
-                        className="gap-2 hidden" // Hidden as per request
-                        title="Toggle Dark Overlay"
-                    >
-                        {isOverlayMode ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                        <span className="hidden sm:inline">{isOverlayMode ? "暗転: ON" : "暗転: OFF"}</span>
-                    </Button>
+return (
+    <div className="flex h-full flex-col bg-gray-100">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between border-b bg-white px-6 py-3 shadow-sm z-30">
+            <div className="flex items-center gap-4">
+                <Button
+                    variant={isPinMode ? "default" : "outline"}
+                    size="default"
+                    onClick={() => setIsPinMode(!isPinMode)}
+                    className="gap-2"
+                >
+                    <PlusCircle className="h-5 w-5" />
+                    {isPinMode ? "ピンモード: ON" : "ピンモード: OFF"}
+                </Button>
 
-                    <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onViewportChange?.("mobile")}
-                            className={cn(
-                                "h-7 px-3 text-xs gap-2 transition-all",
-                                viewport === "mobile"
-                                    ? "bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                                    : "hover:bg-gray-200"
-                            )}
-                            title="Mobile (375px)"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2" /><path d="M12 18h.01" /></svg>
-                            SP <span className={viewport === "mobile" ? "opacity-90" : "opacity-70"}>(375px)</span>
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onViewportChange?.("desktop")}
-                            className={cn(
-                                "h-7 px-3 text-xs gap-2 transition-all",
-                                viewport === "desktop"
-                                    ? "bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                                    : "hover:bg-gray-200"
-                            )}
-                            title="Desktop (1280px)"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="3" rx="2" /><line x1="8" x2="16" y1="21" y2="21" /><line x1="12" x2="12" y1="17" y2="21" /></svg>
-                            PC <span className={viewport === "desktop" ? "opacity-90" : "opacity-70"}>(1280px)</span>
-                        </Button>
-                    </div>
-                </div>
+                <Button
+                    variant={isImageMode ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                        if (!screenshots.desktop && !isImageMode) {
+                            handleTakeScreenshot();
+                        } else {
+                            setIsImageMode(!isImageMode);
+                        }
+                    }}
+                    disabled={isTakingScreenshot}
+                    className="gap-2"
+                >
+                    {isTakingScreenshot ? (
+                        <span className="animate-spin">⌛</span>
+                    ) : (
+                        <span className="text-lg">📷</span>
+                    )}
+                    {isImageMode ? "画像モード: ON" : "画像モード: OFF"}
+                </Button>
+
+                <input
+                    type="file"
+                    ref={desktopFileInputRef}
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload(e, 'desktop')}
+                />
+                <input
+                    type="file"
+                    ref={mobileFileInputRef}
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload(e, 'mobile')}
+                />
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => desktopFileInputRef.current?.click()}
+                    disabled={isTakingScreenshot}
+                    className="gap-1 text-xs"
+                    title="Upload Desktop Screenshot"
+                >
+                    📤 PC
+                </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => mobileFileInputRef.current?.click()}
+                    disabled={isTakingScreenshot}
+                    className="gap-1 text-xs"
+                    title="Upload Mobile Screenshot"
+                >
+                    📤 SP
+                </Button>
+
+                <span className="text-sm text-muted-foreground">
+                    {isPinMode ? "クリックまたはドラッグでコメントを追加・移動" : "閲覧モード"}
+                </span>
             </div>
 
-            {/* Canvas Area */}
-            <div className="flex-1 overflow-auto p-4 md:p-8">
-                <div
-                    className={cn(
-                        "relative mx-auto bg-white shadow-2xl transition-all duration-300 ease-in-out",
-                        viewport === "mobile" ? "w-[375px]" : "w-[1280px]"
-                    )}
-                    style={{ height: isImageMode ? 'auto' : `${currentHeight}px`, minHeight: isImageMode ? '100%' : undefined }}
+            <div className="flex items-center gap-2">
+                {/* ... existing buttons ... */}
+                <Button
+                    variant={isOverlayMode ? "default" : "outline"}
+                    size="sm"
+                    onClick={onToggleOverlay}
+                    className="gap-2 hidden" // Hidden as per request
+                    title="Toggle Dark Overlay"
                 >
-                    {isImageMode && (viewport === 'mobile' ? screenshots.mobile : screenshots.desktop) ? (
-                        <img
-                            src={(viewport === 'mobile' ? screenshots.mobile : screenshots.desktop)?.url}
-                            alt="Site Screenshot"
-                            className="relative w-full h-auto block"
-                            onLoad={(e) => {
-                                const img = e.currentTarget;
-                                // Update height to match rendered image height
-                                if (onCanvasHeightChange) {
-                                    // Use offsetHeight to get the rendered height
-                                    onCanvasHeightChange(img.offsetHeight);
-                                }
+                    {isOverlayMode ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                    <span className="hidden sm:inline">{isOverlayMode ? "暗転: ON" : "暗転: OFF"}</span>
+                </Button>
+
+                <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onViewportChange?.("mobile")}
+                        className={cn(
+                            "h-7 px-3 text-xs gap-2 transition-all",
+                            viewport === "mobile"
+                                ? "bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                                : "hover:bg-gray-200"
+                        )}
+                        title="Mobile (375px)"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2" /><path d="M12 18h.01" /></svg>
+                        SP <span className={viewport === "mobile" ? "opacity-90" : "opacity-70"}>(375px)</span>
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onViewportChange?.("desktop")}
+                        className={cn(
+                            "h-7 px-3 text-xs gap-2 transition-all",
+                            viewport === "desktop"
+                                ? "bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                                : "hover:bg-gray-200"
+                        )}
+                        title="Desktop (1280px)"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="3" rx="2" /><line x1="8" x2="16" y1="21" y2="21" /><line x1="12" x2="12" y1="17" y2="21" /></svg>
+                        PC <span className={viewport === "desktop" ? "opacity-90" : "opacity-70"}>(1280px)</span>
+                    </Button>
+                </div>
+            </div>
+        </div>
+
+        {/* Canvas Area */}
+        <div className="flex-1 overflow-auto p-4 md:p-8">
+            <div
+                className={cn(
+                    "relative mx-auto bg-white shadow-2xl transition-all duration-300 ease-in-out",
+                    viewport === "mobile" ? "w-[375px]" : "w-[1280px]"
+                )}
+                style={{ height: isImageMode ? 'auto' : `${currentHeight}px`, minHeight: isImageMode ? '100%' : undefined }}
+            >
+                {isImageMode && (viewport === 'mobile' ? screenshots.mobile : screenshots.desktop) ? (
+                    <img
+                        src={(viewport === 'mobile' ? screenshots.mobile : screenshots.desktop)?.url}
+                        alt="Site Screenshot"
+                        className="relative w-full h-auto block"
+                        onLoad={(e) => {
+                            const img = e.currentTarget;
+                            // Update height to match rendered image height
+                            if (onCanvasHeightChange) {
+                                // Use offsetHeight to get the rendered height
+                                onCanvasHeightChange(img.offsetHeight);
+                            }
+                        }}
+                    />
+                ) : (
+                    <iframe
+                        src={targetUrl}
+                        className="absolute inset-0 w-full h-full border-0"
+                        title="Target Website"
+                        sandbox="allow-scripts allow-popups allow-forms"
+                    />
+                )}
+
+                {/* Dark overlay when overlay mode is on */}
+                {isOverlayMode && (
+                    <div
+                        className="absolute inset-0 w-full h-full pointer-events-none z-10"
+                        style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+                    />
+                )}
+
+                {/* Extend Height Button - Hidden in image mode */}
+                {!isImageMode && (
+                    <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-8 pt-12 bg-gradient-to-t from-black/10 to-transparent pointer-events-none z-50">
+                        <Button
+                            variant="secondary"
+                            onClick={() => onCanvasHeightChange?.(currentHeight + 500)}
+                            className="gap-2 shadow-lg pointer-events-auto bg-white hover:bg-gray-100 border text-gray-700"
+                        >
+                            <ArrowDown className="h-4 w-4" />
+                            高さを増やす (+500px)
+                        </Button>
+                    </div>
+                )}
+
+                {/* Overlay */}
+                <div
+                    className="annotation-overlay absolute inset-0 w-full h-full z-20"
+                    style={{ cursor: isPinMode ? 'crosshair' : 'default' }}
+                    onMouseDown={handleOverlayMouseDown}
+                    onTouchStart={handleOverlayMouseDown}
+                    onMouseMove={(e) => {
+                        handleOverlayMouseMove(e);
+                        handleCommentMouseMove(e);
+                        handleResizeMouseMove(e as any);
+                    }}
+                    onTouchMove={(e) => {
+                        handleOverlayMouseMove(e);
+                        handleCommentMouseMove(e);
+                        handleResizeMouseMove(e as any);
+                    }}
+                    onMouseUp={(e) => {
+                        handleOverlayMouseUp(e);
+                        handleCommentMouseUp();
+                        handleResizeMouseUp();
+                    }}
+                    onTouchEnd={(e) => {
+                        handleOverlayMouseUp(e as any);
+                        handleCommentMouseUp();
+                        handleResizeMouseUp();
+                    }}
+                >
+                    {/* Drag selection rectangle */}
+                    {isDragging && dragStart && dragEnd && (
+                        <div
+                            className="absolute border-2 border-solid pointer-events-none bg-blue-500/10"
+                            style={{
+                                left: `${Math.min(dragStart.x, dragEnd.x) * 100}%`,
+                                top: `${Math.min(dragStart.y, dragEnd.y) * 100}%`,
+                                width: `${Math.abs(dragEnd.x - dragStart.x) * 100}%`,
+                                height: `${Math.abs(dragEnd.y - dragStart.y) * 100}%`,
+                                borderColor: '#3b82f6',
                             }}
                         />
-                    ) : (
-                        <iframe
-                            src={targetUrl}
-                            className="absolute inset-0 w-full h-full border-0"
-                            title="Target Website"
-                            sandbox="allow-scripts allow-popups allow-forms"
-                        />
                     )}
 
-                    {/* Dark overlay when overlay mode is on */}
-                    {isOverlayMode && (
-                        <div
-                            className="absolute inset-0 w-full h-full pointer-events-none z-10"
-                            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-                        />
-                    )}
+                    {/* Existing Pins and Areas */}
+                    {visibleComments.map((comment) => {
+                        const isMoving = movingCommentId === comment.id;
+                        const isResizing = resizingCommentId === comment.id;
 
-                    {/* Extend Height Button - Hidden in image mode */}
-                    {!isImageMode && (
-                        <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-8 pt-12 bg-gradient-to-t from-black/10 to-transparent pointer-events-none z-50">
-                            <Button
-                                variant="secondary"
-                                onClick={() => onCanvasHeightChange?.(currentHeight + 500)}
-                                className="gap-2 shadow-lg pointer-events-auto bg-white hover:bg-gray-100 border text-gray-700"
-                            >
-                                <ArrowDown className="h-4 w-4" />
-                                高さを増やす (+500px)
-                            </Button>
-                        </div>
-                    )}
+                        const posX = comment.posX;
+                        const posY = comment.posY;
+                        const width = comment.width;
+                        const height = comment.height;
 
-                    {/* Overlay */}
-                    <div
-                        className="annotation-overlay absolute inset-0 w-full h-full z-20"
-                        style={{ cursor: isPinMode ? 'crosshair' : 'default' }}
-                        onMouseDown={handleOverlayMouseDown}
-                        onTouchStart={handleOverlayMouseDown}
-                        onMouseMove={(e) => {
-                            handleOverlayMouseMove(e);
-                            handleCommentMouseMove(e);
-                            handleResizeMouseMove(e as any);
-                        }}
-                        onTouchMove={(e) => {
-                            handleOverlayMouseMove(e);
-                            handleCommentMouseMove(e);
-                            handleResizeMouseMove(e as any);
-                        }}
-                        onMouseUp={(e) => {
-                            handleOverlayMouseUp(e);
-                            handleCommentMouseUp();
-                            handleResizeMouseUp();
-                        }}
-                        onTouchEnd={(e) => {
-                            handleOverlayMouseUp(e as any);
-                            handleCommentMouseUp();
-                            handleResizeMouseUp();
-                        }}
-                    >
-                        {/* Drag selection rectangle */}
-                        {isDragging && dragStart && dragEnd && (
-                            <div
-                                className="absolute border-2 border-solid pointer-events-none bg-blue-500/10"
-                                style={{
-                                    left: `${Math.min(dragStart.x, dragEnd.x) * 100}%`,
-                                    top: `${Math.min(dragStart.y, dragEnd.y) * 100}%`,
-                                    width: `${Math.abs(dragEnd.x - dragStart.x) * 100}%`,
-                                    height: `${Math.abs(dragEnd.y - dragStart.y) * 100}%`,
-                                    borderColor: '#3b82f6',
-                                }}
-                            />
-                        )}
+                        const statusColor = comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#3b82f6" : "#ef4444";
+                        const statusBg = comment.status === "completed" ? "rgba(156, 163, 175, 0.1)" : comment.status === "in-progress" ? "rgba(59, 130, 246, 0.1)" : "rgba(239, 68, 68, 0.1)";
 
-                        {/* Existing Pins and Areas */}
-                        {visibleComments.map((comment) => {
-                            const isMoving = movingCommentId === comment.id;
-                            const isResizing = resizingCommentId === comment.id;
-
-                            const posX = comment.posX;
-                            const posY = comment.posY;
-                            const width = comment.width;
-                            const height = comment.height;
-
-                            const statusColor = comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#3b82f6" : "#ef4444";
-                            const statusBg = comment.status === "completed" ? "rgba(156, 163, 175, 0.1)" : comment.status === "in-progress" ? "rgba(59, 130, 246, 0.1)" : "rgba(239, 68, 68, 0.1)";
-
-                            return (
-                                <div key={comment.id}>
-                                    {width && height ? (
-                                        // Area selection with resize handles
+                        return (
+                            <div key={comment.id}>
+                                {width && height ? (
+                                    // Area selection with resize handles
+                                    <div
+                                        id={`comment-${comment.id}`}
+                                        className={cn(
+                                            "absolute border-2 border-solid cursor-pointer pointer-events-auto transition-colors",
+                                            resizingCommentId === comment.id && "border-[3px]"
+                                        )}
+                                        style={{
+                                            left: `${posX * 100}%`,
+                                            top: `${posY * 100}%`,
+                                            width: `${width * 100}%`,
+                                            height: `${height * 100}%`,
+                                            borderColor: statusColor,
+                                            backgroundColor: statusBg,
+                                            boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.5)',
+                                        }}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setActivePinId(activePinId === comment.id ? null : comment.id);
+                                        }}
+                                    >
+                                        {/* Pin at center of area - with white outline for visibility */}
                                         <div
-                                            id={`comment-${comment.id}`}
-                                            className={cn(
-                                                "absolute border-2 border-solid cursor-pointer pointer-events-auto transition-colors",
-                                                resizingCommentId === comment.id && "border-[3px]"
-                                            )}
-                                            style={{
-                                                left: `${posX * 100}%`,
-                                                top: `${posY * 100}%`,
-                                                width: `${width * 100}%`,
-                                                height: `${height * 100}%`,
-                                                borderColor: statusColor,
-                                                backgroundColor: statusBg,
-                                                boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.5)',
-                                            }}
-                                            onClick={(e) => {
+                                            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-move"
+                                            onMouseDown={(e) => {
                                                 e.stopPropagation();
-                                                setActivePinId(activePinId === comment.id ? null : comment.id);
+                                                handleCommentMouseDown(e, comment.id, comment);
                                             }}
-                                        >
-                                            {/* Pin at center of area - with white outline for visibility */}
-                                            <div
-                                                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-move"
-                                                onMouseDown={(e) => {
-                                                    e.stopPropagation();
-                                                    handleCommentMouseDown(e, comment.id, comment);
-                                                }}
-                                                onTouchStart={(e) => {
-                                                    e.stopPropagation();
-                                                    handleCommentMouseDown(e, comment.id, comment);
-                                                }}
-                                                style={{ pointerEvents: 'auto' }}
-                                            >
-                                                <div className="relative">
-                                                    {/* White outline */}
-                                                    <MapPin
-                                                        className="absolute w-6 h-6 md:w-8 md:h-8 text-white fill-white"
-                                                        style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}
-                                                    />
-                                                    {/* Colored pin on top */}
-                                                    <MapPin
-                                                        className={cn(
-                                                            "w-6 h-6 md:w-8 md:h-8 drop-shadow-lg",
-                                                            comment.status === "completed"
-                                                                ? "text-gray-500 fill-gray-500"
-                                                                : comment.status === "in-progress"
-                                                                    ? "text-blue-600 fill-blue-600"
-                                                                    : "text-red-600 fill-red-600"
-                                                        )}
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            {/* Resize handles - with white stroke for visibility */}
-                                            {isPinMode && (
-                                                <>
-                                                    {/* Top-left */}
-                                                    <div
-                                                        className="absolute -left-2 -top-2 w-5 h-5 bg-white border-2 cursor-nwse-resize z-10 hover:scale-125 transition-transform rounded-full"
-                                                        style={{
-                                                            borderColor: statusColor,
-                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                                                        }}
-                                                        onMouseDown={(e) => {
-                                                            e.stopPropagation();
-                                                            handleResizeMouseDown(e, comment.id, comment, 'tl');
-                                                        }}
-                                                        onTouchStart={(e) => {
-                                                            e.stopPropagation();
-                                                            handleResizeMouseDown(e, comment.id, comment, 'tl');
-                                                        }}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    />
-                                                    {/* Top-right */}
-                                                    <div
-                                                        className="absolute -right-2 -top-2 w-5 h-5 bg-white border-2 cursor-nesw-resize z-10 hover:scale-125 transition-transform rounded-full"
-                                                        style={{
-                                                            borderColor: statusColor,
-                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                                                        }}
-                                                        onMouseDown={(e) => {
-                                                            e.stopPropagation();
-                                                            handleResizeMouseDown(e, comment.id, comment, 'tr');
-                                                        }}
-                                                        onTouchStart={(e) => {
-                                                            e.stopPropagation();
-                                                            handleResizeMouseDown(e, comment.id, comment, 'tr');
-                                                        }}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    />
-                                                    {/* Bottom-left */}
-                                                    <div
-                                                        className="absolute -left-2 -bottom-2 w-5 h-5 bg-white border-2 cursor-nesw-resize z-10 hover:scale-125 transition-transform rounded-full"
-                                                        style={{
-                                                            borderColor: statusColor,
-                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                                                        }}
-                                                        onMouseDown={(e) => {
-                                                            e.stopPropagation();
-                                                            handleResizeMouseDown(e, comment.id, comment, 'bl');
-                                                        }}
-                                                        onTouchStart={(e) => {
-                                                            e.stopPropagation();
-                                                            handleResizeMouseDown(e, comment.id, comment, 'bl');
-                                                        }}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    />
-                                                    {/* Bottom-right */}
-                                                    <div
-                                                        className="absolute -right-2 -bottom-2 w-5 h-5 bg-white border-2 cursor-nwse-resize z-10 hover:scale-125 transition-transform rounded-full"
-                                                        style={{
-                                                            borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1",
-                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                                                        }}
-                                                        onMouseDown={(e) => {
-                                                            e.stopPropagation();
-                                                            handleResizeMouseDown(e, comment.id, comment, 'br');
-                                                        }}
-                                                        onTouchStart={(e) => {
-                                                            e.stopPropagation();
-                                                            handleResizeMouseDown(e, comment.id, comment, 'br');
-                                                        }}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    />
-                                                </>
-                                            )}
-
-                                            {activePinId === comment.id && (
-                                                <div
-                                                    className="absolute z-50 w-80 rounded-xl border border-gray-100 bg-white p-4 shadow-2xl cursor-default"
-                                                    style={{
-                                                        ...getModalPosition({ x: comment.posX, y: comment.posY, width: comment.width, height: comment.height })
-                                                    }}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    onMouseDown={(e) => e.stopPropagation()}
-                                                    onTouchStart={(e) => e.stopPropagation()}
-                                                >
-                                                    {/* Header: Author & Actions */}
-                                                    <div className="flex items-start justify-between mb-3">
-                                                        <div className="flex items-center gap-2">
-                                                            <div
-                                                                className={cn(
-                                                                    "flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold",
-                                                                    comment.status === "completed"
-                                                                        ? "bg-gray-200 text-gray-700 border-gray-400"
-                                                                        : comment.status === "in-progress"
-                                                                            ? "bg-blue-100 text-blue-800 border-blue-400"
-                                                                            : "bg-red-100 text-red-800 border-red-400"
-                                                                )}
-                                                            >
-                                                                {comment.authorName ? comment.authorName.slice(0, 2).toUpperCase() : "AN"}
-                                                            </div>
-                                                            <div className="flex flex-col">
-                                                                <span className="text-sm font-bold text-gray-900 leading-none">
-                                                                    {comment.authorName || "Anonymous"}
-                                                                </span>
-                                                                <span className="text-[10px] text-gray-400 mt-1">
-                                                                    {new Date(comment.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-center gap-1">
-                                                            {editingCommentId !== comment.id && (
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    className="h-7 w-7 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full"
-                                                                    onClick={() => handleStartEdit(comment)}
-                                                                    title="Edit comment"
-                                                                >
-                                                                    <Pencil className="h-3.5 w-3.5" />
-                                                                </Button>
-                                                            )}
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-7 w-7 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full"
-                                                                onClick={() => setActivePinId(null)}
-                                                                title="Close"
-                                                            >
-                                                                <X className="h-4 w-4" />
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Body: Content */}
-                                                    <div className="mb-4">
-                                                        {editingCommentId === comment.id ? (
-                                                            <div className="space-y-3">
-                                                                <textarea
-                                                                    className="w-full min-h-[80px] rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors resize-none"
-                                                                    value={editMessage}
-                                                                    onChange={(e) => setEditMessage(e.target.value)}
-                                                                    autoFocus
-                                                                    placeholder="コメントを入力..."
-                                                                />
-                                                                <div className="flex justify-end gap-2">
-                                                                    <Button
-                                                                        size="sm"
-                                                                        variant="ghost"
-                                                                        onClick={handleCancelEdit}
-                                                                        className="h-8 px-3 text-gray-500 hover:text-gray-900"
-                                                                    >
-                                                                        Cancel
-                                                                    </Button>
-                                                                    <Button
-                                                                        size="sm"
-                                                                        onClick={() => handleSaveEdit(comment.id)}
-                                                                        className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white shadow-sm rounded-md"
-                                                                    >
-                                                                        Save
-                                                                    </Button>
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
-                                                                {comment.message}
-                                                            </p>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Footer: Metadata Badges */}
-                                                    <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
-                                                        <select
-                                                            className={cn(
-                                                                "h-7 text-xs font-semibold px-3 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-offset-0 appearance-none text-center min-w-[90px]",
-                                                                comment.category === "coding"
-                                                                    ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                                                                    : "bg-orange-100 text-orange-800 hover:bg-orange-200"
-                                                            )}
-                                                            value={comment.category}
-                                                            onChange={(e) => onUpdateComment?.(comment.id, { category: e.target.value as any })}
-                                                        >
-                                                            <option value="coding">コーディング</option>
-                                                            <option value="design">デザイン</option>
-                                                        </select>
-                                                        <select
-                                                            className={cn(
-                                                                "h-7 text-xs font-semibold px-3 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-offset-0 appearance-none text-center min-w-[75px]",
-                                                                comment.status === "completed"
-                                                                    ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
-                                                                    : comment.status === "in-progress"
-                                                                        ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                                                                        : "bg-red-100 text-red-800 hover:bg-red-200"
-                                                            )}
-                                                            value={comment.status}
-                                                            onChange={(e) => onUpdateComment?.(comment.id, { status: e.target.value as any })}
-                                                        >
-                                                            <option value="pending">未対応</option>
-                                                            <option value="in-progress">対応中</option>
-                                                            <option value="completed">完了</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        // Pin only - with white outline for visibility
-                                        <div
-                                            id={`comment-${comment.id}`}
-                                            className={cn(
-                                                "absolute -translate-x-1/2 -translate-y-1/2 pointer-events-auto",
-                                                movingCommentId === comment.id && "scale-125"
-                                            )}
-                                            style={{
-                                                left: `${posX * 100}%`,
-                                                top: `${posY * 100}%`,
+                                            onTouchStart={(e) => {
+                                                e.stopPropagation();
+                                                handleCommentMouseDown(e, comment.id, comment);
                                             }}
+                                            style={{ pointerEvents: 'auto' }}
                                         >
-                                            <div
-                                                className="relative w-10 h-10 cursor-move"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setActivePinId(activePinId === comment.id ? null : comment.id);
-                                                }}
-                                                onMouseDown={(e) => {
-                                                    e.stopPropagation();
-                                                    handleCommentMouseDown(e, comment.id, comment);
-                                                }}
-                                                onTouchStart={(e) => {
-                                                    e.stopPropagation();
-                                                    handleCommentMouseDown(e, comment.id, comment);
-                                                }}
-                                            >
+                                            <div className="relative">
                                                 {/* White outline */}
                                                 <MapPin
-                                                    className="absolute inset-0 h-10 w-10 text-white fill-white pointer-events-none"
+                                                    className="absolute w-6 h-6 md:w-8 md:h-8 text-white fill-white"
                                                     style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}
                                                 />
                                                 {/* Colored pin on top */}
                                                 <MapPin
                                                     className={cn(
-                                                        "absolute inset-0 h-10 w-10 transition-transform hover:scale-110 pointer-events-none",
+                                                        "w-6 h-6 md:w-8 md:h-8 drop-shadow-lg",
                                                         comment.status === "completed"
-                                                            ? "text-gray-400 fill-gray-400"
+                                                            ? "text-gray-500 fill-gray-500"
                                                             : comment.status === "in-progress"
-                                                                ? "text-blue-500 fill-blue-500"
-                                                                : "text-red-500 fill-red-500"
+                                                                ? "text-blue-600 fill-blue-600"
+                                                                : "text-red-600 fill-red-600"
                                                     )}
                                                 />
                                             </div>
-                                            {activePinId === comment.id && (
+                                        </div>
+
+                                        {/* Resize handles - with white stroke for visibility */}
+                                        {isPinMode && (
+                                            <>
+                                                {/* Top-left */}
                                                 <div
-                                                    className="absolute z-50 w-80 rounded-xl border border-gray-100 bg-white p-4 shadow-2xl cursor-default"
+                                                    className="absolute -left-2 -top-2 w-5 h-5 bg-white border-2 cursor-nwse-resize z-10 hover:scale-125 transition-transform rounded-full"
                                                     style={{
-                                                        ...getModalPosition({ x: comment.posX, y: comment.posY, width: comment.width, height: comment.height })
+                                                        borderColor: statusColor,
+                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                                    }}
+                                                    onMouseDown={(e) => {
+                                                        e.stopPropagation();
+                                                        handleResizeMouseDown(e, comment.id, comment, 'tl');
+                                                    }}
+                                                    onTouchStart={(e) => {
+                                                        e.stopPropagation();
+                                                        handleResizeMouseDown(e, comment.id, comment, 'tl');
                                                     }}
                                                     onClick={(e) => e.stopPropagation()}
-                                                    onMouseDown={(e) => e.stopPropagation()}
-                                                    onTouchStart={(e) => e.stopPropagation()}
-                                                >
-                                                    {/* Header: Author & Actions */}
-                                                    <div className="flex items-start justify-between mb-3">
-                                                        <div className="flex items-center gap-2">
-                                                            <div
-                                                                className={cn(
-                                                                    "flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold",
-                                                                    comment.status === "completed"
-                                                                        ? "bg-gray-200 text-gray-700 border-gray-400"
-                                                                        : comment.status === "in-progress"
-                                                                            ? "bg-blue-100 text-blue-800 border-blue-400"
-                                                                            : "bg-red-100 text-red-800 border-red-400"
-                                                                )}
-                                                            >
-                                                                {comment.authorName ? comment.authorName.slice(0, 2).toUpperCase() : "AN"}
-                                                            </div>
-                                                            <div className="flex flex-col">
-                                                                <span className="text-sm font-bold text-gray-900 leading-none">
-                                                                    {comment.authorName || "Anonymous"}
-                                                                </span>
-                                                                <span className="text-[10px] text-gray-400 mt-1">
-                                                                    {new Date(comment.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-center gap-1">
-                                                            {editingCommentId !== comment.id && (
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    className="h-7 w-7 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full"
-                                                                    onClick={() => handleStartEdit(comment)}
-                                                                    title="Edit comment"
-                                                                >
-                                                                    <Pencil className="h-3.5 w-3.5" />
-                                                                </Button>
+                                                />
+                                                {/* Top-right */}
+                                                <div
+                                                    className="absolute -right-2 -top-2 w-5 h-5 bg-white border-2 cursor-nesw-resize z-10 hover:scale-125 transition-transform rounded-full"
+                                                    style={{
+                                                        borderColor: statusColor,
+                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                                    }}
+                                                    onMouseDown={(e) => {
+                                                        e.stopPropagation();
+                                                        handleResizeMouseDown(e, comment.id, comment, 'tr');
+                                                    }}
+                                                    onTouchStart={(e) => {
+                                                        e.stopPropagation();
+                                                        handleResizeMouseDown(e, comment.id, comment, 'tr');
+                                                    }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                />
+                                                {/* Bottom-left */}
+                                                <div
+                                                    className="absolute -left-2 -bottom-2 w-5 h-5 bg-white border-2 cursor-nesw-resize z-10 hover:scale-125 transition-transform rounded-full"
+                                                    style={{
+                                                        borderColor: statusColor,
+                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                                    }}
+                                                    onMouseDown={(e) => {
+                                                        e.stopPropagation();
+                                                        handleResizeMouseDown(e, comment.id, comment, 'bl');
+                                                    }}
+                                                    onTouchStart={(e) => {
+                                                        e.stopPropagation();
+                                                        handleResizeMouseDown(e, comment.id, comment, 'bl');
+                                                    }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                />
+                                                {/* Bottom-right */}
+                                                <div
+                                                    className="absolute -right-2 -bottom-2 w-5 h-5 bg-white border-2 cursor-nwse-resize z-10 hover:scale-125 transition-transform rounded-full"
+                                                    style={{
+                                                        borderColor: comment.status === "completed" ? "#9ca3af" : comment.status === "in-progress" ? "#38bdf8" : "#cbd5e1",
+                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                                    }}
+                                                    onMouseDown={(e) => {
+                                                        e.stopPropagation();
+                                                        handleResizeMouseDown(e, comment.id, comment, 'br');
+                                                    }}
+                                                    onTouchStart={(e) => {
+                                                        e.stopPropagation();
+                                                        handleResizeMouseDown(e, comment.id, comment, 'br');
+                                                    }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                />
+                                            </>
+                                        )}
+
+                                        {activePinId === comment.id && (
+                                            <div
+                                                className="absolute z-50 w-80 rounded-xl border border-gray-100 bg-white p-4 shadow-2xl cursor-default"
+                                                style={{
+                                                    ...getModalPosition({ x: comment.posX, y: comment.posY, width: comment.width, height: comment.height })
+                                                }}
+                                                onClick={(e) => e.stopPropagation()}
+                                                onMouseDown={(e) => e.stopPropagation()}
+                                                onTouchStart={(e) => e.stopPropagation()}
+                                            >
+                                                {/* Header: Author & Actions */}
+                                                <div className="flex items-start justify-between mb-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <div
+                                                            className={cn(
+                                                                "flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold",
+                                                                comment.status === "completed"
+                                                                    ? "bg-gray-200 text-gray-700 border-gray-400"
+                                                                    : comment.status === "in-progress"
+                                                                        ? "bg-blue-100 text-blue-800 border-blue-400"
+                                                                        : "bg-red-100 text-red-800 border-red-400"
                                                             )}
+                                                        >
+                                                            {comment.authorName ? comment.authorName.slice(0, 2).toUpperCase() : "AN"}
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm font-bold text-gray-900 leading-none">
+                                                                {comment.authorName || "Anonymous"}
+                                                            </span>
+                                                            <span className="text-[10px] text-gray-400 mt-1">
+                                                                {new Date(comment.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        {editingCommentId !== comment.id && (
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 className="h-7 w-7 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full"
-                                                                onClick={() => setActivePinId(null)}
-                                                                title="Close"
+                                                                onClick={() => handleStartEdit(comment)}
+                                                                title="Edit comment"
                                                             >
-                                                                <X className="h-4 w-4" />
+                                                                <Pencil className="h-3.5 w-3.5" />
                                                             </Button>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Body: Content */}
-                                                    <div className="mb-4">
-                                                        {editingCommentId === comment.id ? (
-                                                            <div className="space-y-3">
-                                                                <textarea
-                                                                    className="w-full min-h-[80px] rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors resize-none"
-                                                                    value={editMessage}
-                                                                    onChange={(e) => setEditMessage(e.target.value)}
-                                                                    autoFocus
-                                                                    placeholder="コメントを入力..."
-                                                                />
-                                                                <div className="flex justify-end gap-2">
-                                                                    <Button
-                                                                        size="sm"
-                                                                        variant="ghost"
-                                                                        onClick={handleCancelEdit}
-                                                                        className="h-8 px-3 text-gray-500 hover:text-gray-900"
-                                                                    >
-                                                                        Cancel
-                                                                    </Button>
-                                                                    <Button
-                                                                        size="sm"
-                                                                        onClick={() => handleSaveEdit(comment.id)}
-                                                                        className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white shadow-sm rounded-md"
-                                                                    >
-                                                                        Save
-                                                                    </Button>
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
-                                                                {comment.message}
-                                                            </p>
                                                         )}
-                                                    </div>
-
-                                                    {/* Footer: Metadata Badges */}
-                                                    <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
-                                                        <select
-                                                            className={cn(
-                                                                "h-7 text-xs font-semibold px-3 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-offset-0 appearance-none text-center min-w-[90px]",
-                                                                comment.category === "coding"
-                                                                    ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                                                                    : "bg-orange-100 text-orange-800 hover:bg-orange-200"
-                                                            )}
-                                                            value={comment.category}
-                                                            onChange={(e) => onUpdateComment?.(comment.id, { category: e.target.value as any })}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-7 w-7 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full"
+                                                            onClick={() => setActivePinId(null)}
+                                                            title="Close"
                                                         >
-                                                            <option value="coding">コーディング</option>
-                                                            <option value="design">デザイン</option>
-                                                        </select>
-                                                        <select
-                                                            className={cn(
-                                                                "h-7 text-xs font-semibold px-3 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-offset-0 appearance-none text-center min-w-[75px]",
-                                                                comment.status === "completed"
-                                                                    ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
-                                                                    : comment.status === "in-progress"
-                                                                        ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                                                                        : "bg-red-100 text-red-800 hover:bg-red-200"
-                                                            )}
-                                                            value={comment.status}
-                                                            onChange={(e) => onUpdateComment?.(comment.id, { status: e.target.value as any })}
-                                                        >
-                                                            <option value="pending">未対応</option>
-                                                            <option value="in-progress">対応中</option>
-                                                            <option value="completed">完了</option>
-                                                        </select>
+                                                            <X className="h-4 w-4" />
+                                                        </Button>
                                                     </div>
                                                 </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
 
-                        {/* Temp Pin/Area & Modal */}
-                        {isAdding && tempPin && (
-                            <div className="pointer-events-auto">
-                                {/* Show temp area or pin */}
-                                {tempPin.width && tempPin.height ? (
-                                    <div
-                                        className="absolute border-4 border-dashed border-primary"
-                                        style={{
-                                            left: `${tempPin.x * 100}%`,
-                                            top: `${tempPin.y * 100}%`,
-                                            width: `${tempPin.width * 100}%`,
-                                            height: `${tempPin.height * 100}%`,
-                                            boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.8), 0 0 0 4px #3b82f6',
-                                        }}
-                                    >
-                                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                                            <div className="relative">
-                                                <MapPin className="absolute w-6 h-6 md:w-8 md:h-8 text-white fill-white" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
-                                                <MapPin className="w-6 h-6 md:w-8 md:h-8 text-red-500 fill-red-400 animate-bounce" />
+                                                {/* Body: Content */}
+                                                <div className="mb-4">
+                                                    {editingCommentId === comment.id ? (
+                                                        <div className="space-y-3">
+                                                            <textarea
+                                                                className="w-full min-h-[80px] rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors resize-none"
+                                                                value={editMessage}
+                                                                onChange={(e) => setEditMessage(e.target.value)}
+                                                                autoFocus
+                                                                placeholder="コメントを入力..."
+                                                            />
+                                                            <div className="flex justify-end gap-2">
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    onClick={handleCancelEdit}
+                                                                    className="h-8 px-3 text-gray-500 hover:text-gray-900"
+                                                                >
+                                                                    Cancel
+                                                                </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    onClick={() => handleSaveEdit(comment.id)}
+                                                                    className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white shadow-sm rounded-md"
+                                                                >
+                                                                    Save
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                                                            {comment.message}
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                {/* Footer: Metadata Badges */}
+                                                <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+                                                    <select
+                                                        className={cn(
+                                                            "h-7 text-xs font-semibold px-3 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-offset-0 appearance-none text-center min-w-[90px]",
+                                                            comment.category === "coding"
+                                                                ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                                                                : "bg-orange-100 text-orange-800 hover:bg-orange-200"
+                                                        )}
+                                                        value={comment.category}
+                                                        onChange={(e) => onUpdateComment?.(comment.id, { category: e.target.value as any })}
+                                                    >
+                                                        <option value="coding">コーディング</option>
+                                                        <option value="design">デザイン</option>
+                                                    </select>
+                                                    <select
+                                                        className={cn(
+                                                            "h-7 text-xs font-semibold px-3 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-offset-0 appearance-none text-center min-w-[75px]",
+                                                            comment.status === "completed"
+                                                                ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                                                                : comment.status === "in-progress"
+                                                                    ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                                                                    : "bg-red-100 text-red-800 hover:bg-red-200"
+                                                        )}
+                                                        value={comment.status}
+                                                        onChange={(e) => onUpdateComment?.(comment.id, { status: e.target.value as any })}
+                                                    >
+                                                        <option value="pending">未対応</option>
+                                                        <option value="in-progress">対応中</option>
+                                                        <option value="completed">完了</option>
+                                                    </select>
+                                                </div>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
                                 ) : (
-                                    <div className="relative -translate-x-1/2 -translate-y-1/2" style={{ left: `${tempPin.x * 100}%`, top: `${tempPin.y * 100}%` }}>
-                                        <MapPin className="absolute w-8 h-8 md:w-10 md:h-10 text-white fill-white animate-bounce" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
-                                        <MapPin className="relative w-8 h-8 md:w-10 md:h-10 text-primary fill-primary animate-bounce" />
+                                    // Pin only - with white outline for visibility
+                                    <div
+                                        id={`comment-${comment.id}`}
+                                        className={cn(
+                                            "absolute -translate-x-1/2 -translate-y-1/2 pointer-events-auto",
+                                            movingCommentId === comment.id && "scale-125"
+                                        )}
+                                        style={{
+                                            left: `${posX * 100}%`,
+                                            top: `${posY * 100}%`,
+                                        }}
+                                    >
+                                        <div
+                                            className="relative w-10 h-10 cursor-move"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setActivePinId(activePinId === comment.id ? null : comment.id);
+                                            }}
+                                            onMouseDown={(e) => {
+                                                e.stopPropagation();
+                                                handleCommentMouseDown(e, comment.id, comment);
+                                            }}
+                                            onTouchStart={(e) => {
+                                                e.stopPropagation();
+                                                handleCommentMouseDown(e, comment.id, comment);
+                                            }}
+                                        >
+                                            {/* White outline */}
+                                            <MapPin
+                                                className="absolute inset-0 h-10 w-10 text-white fill-white pointer-events-none"
+                                                style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}
+                                            />
+                                            {/* Colored pin on top */}
+                                            <MapPin
+                                                className={cn(
+                                                    "absolute inset-0 h-10 w-10 transition-transform hover:scale-110 pointer-events-none",
+                                                    comment.status === "completed"
+                                                        ? "text-gray-400 fill-gray-400"
+                                                        : comment.status === "in-progress"
+                                                            ? "text-blue-500 fill-blue-500"
+                                                            : "text-red-500 fill-red-500"
+                                                )}
+                                            />
+                                        </div>
+                                        {activePinId === comment.id && (
+                                            <div
+                                                className="absolute z-50 w-80 rounded-xl border border-gray-100 bg-white p-4 shadow-2xl cursor-default"
+                                                style={{
+                                                    ...getModalPosition({ x: comment.posX, y: comment.posY, width: comment.width, height: comment.height })
+                                                }}
+                                                onClick={(e) => e.stopPropagation()}
+                                                onMouseDown={(e) => e.stopPropagation()}
+                                                onTouchStart={(e) => e.stopPropagation()}
+                                            >
+                                                {/* Header: Author & Actions */}
+                                                <div className="flex items-start justify-between mb-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <div
+                                                            className={cn(
+                                                                "flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold",
+                                                                comment.status === "completed"
+                                                                    ? "bg-gray-200 text-gray-700 border-gray-400"
+                                                                    : comment.status === "in-progress"
+                                                                        ? "bg-blue-100 text-blue-800 border-blue-400"
+                                                                        : "bg-red-100 text-red-800 border-red-400"
+                                                            )}
+                                                        >
+                                                            {comment.authorName ? comment.authorName.slice(0, 2).toUpperCase() : "AN"}
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm font-bold text-gray-900 leading-none">
+                                                                {comment.authorName || "Anonymous"}
+                                                            </span>
+                                                            <span className="text-[10px] text-gray-400 mt-1">
+                                                                {new Date(comment.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        {editingCommentId !== comment.id && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-7 w-7 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full"
+                                                                onClick={() => handleStartEdit(comment)}
+                                                                title="Edit comment"
+                                                            >
+                                                                <Pencil className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                        )}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-7 w-7 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full"
+                                                            onClick={() => setActivePinId(null)}
+                                                            title="Close"
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Body: Content */}
+                                                <div className="mb-4">
+                                                    {editingCommentId === comment.id ? (
+                                                        <div className="space-y-3">
+                                                            <textarea
+                                                                className="w-full min-h-[80px] rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors resize-none"
+                                                                value={editMessage}
+                                                                onChange={(e) => setEditMessage(e.target.value)}
+                                                                autoFocus
+                                                                placeholder="コメントを入力..."
+                                                            />
+                                                            <div className="flex justify-end gap-2">
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    onClick={handleCancelEdit}
+                                                                    className="h-8 px-3 text-gray-500 hover:text-gray-900"
+                                                                >
+                                                                    Cancel
+                                                                </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    onClick={() => handleSaveEdit(comment.id)}
+                                                                    className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white shadow-sm rounded-md"
+                                                                >
+                                                                    Save
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                                                            {comment.message}
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                {/* Footer: Metadata Badges */}
+                                                <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+                                                    <select
+                                                        className={cn(
+                                                            "h-7 text-xs font-semibold px-3 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-offset-0 appearance-none text-center min-w-[90px]",
+                                                            comment.category === "coding"
+                                                                ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                                                                : "bg-orange-100 text-orange-800 hover:bg-orange-200"
+                                                        )}
+                                                        value={comment.category}
+                                                        onChange={(e) => onUpdateComment?.(comment.id, { category: e.target.value as any })}
+                                                    >
+                                                        <option value="coding">コーディング</option>
+                                                        <option value="design">デザイン</option>
+                                                    </select>
+                                                    <select
+                                                        className={cn(
+                                                            "h-7 text-xs font-semibold px-3 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-offset-0 appearance-none text-center min-w-[75px]",
+                                                            comment.status === "completed"
+                                                                ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                                                                : comment.status === "in-progress"
+                                                                    ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                                                                    : "bg-red-100 text-red-800 hover:bg-red-200"
+                                                        )}
+                                                        value={comment.status}
+                                                        onChange={(e) => onUpdateComment?.(comment.id, { status: e.target.value as any })}
+                                                    >
+                                                        <option value="pending">未対応</option>
+                                                        <option value="in-progress">対応中</option>
+                                                        <option value="completed">完了</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
+                            </div>
+                        );
+                    })}
 
-
-                                {/* Comment Modal */}
+                    {/* Temp Pin/Area & Modal */}
+                    {isAdding && tempPin && (
+                        <div className="pointer-events-auto">
+                            {/* Show temp area or pin */}
+                            {tempPin.width && tempPin.height ? (
                                 <div
-                                    className="absolute w-96 rounded-xl border border-gray-100 bg-white p-5 shadow-2xl z-20"
-                                    style={getModalPosition(tempPin)}
-                                    onClick={(e) => e.stopPropagation()}
+                                    className="absolute border-4 border-dashed border-primary"
+                                    style={{
+                                        left: `${tempPin.x * 100}%`,
+                                        top: `${tempPin.y * 100}%`,
+                                        width: `${tempPin.width * 100}%`,
+                                        height: `${tempPin.height * 100}%`,
+                                        boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.8), 0 0 0 4px #3b82f6',
+                                    }}
                                 >
-                                    {/* Header */}
-                                    <div className="mb-4 flex items-center justify-between">
-                                        <h3 className="text-lg font-bold text-gray-900">Add Comment</h3>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-7 w-7 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full"
-                                            onClick={handleCancel}
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </Button>
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                                        <div className="relative">
+                                            <MapPin className="absolute w-6 h-6 md:w-8 md:h-8 text-white fill-white" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
+                                            <MapPin className="w-6 h-6 md:w-8 md:h-8 text-red-500 fill-red-400 animate-bounce" />
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="relative -translate-x-1/2 -translate-y-1/2" style={{ left: `${tempPin.x * 100}%`, top: `${tempPin.y * 100}%` }}>
+                                    <MapPin className="absolute w-8 h-8 md:w-10 md:h-10 text-white fill-white animate-bounce" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
+                                    <MapPin className="relative w-8 h-8 md:w-10 md:h-10 text-primary fill-primary animate-bounce" />
+                                </div>
+                            )}
+
+
+                            {/* Comment Modal */}
+                            <div
+                                className="absolute w-96 rounded-xl border border-gray-100 bg-white p-5 shadow-2xl z-20"
+                                style={getModalPosition(tempPin)}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {/* Header */}
+                                <div className="mb-4 flex items-center justify-between">
+                                    <h3 className="text-lg font-bold text-gray-900">Add Comment</h3>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full"
+                                        onClick={handleCancel}
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {/* Message Input */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-gray-700">
+                                            Message
+                                        </label>
+                                        <textarea
+                                            placeholder="コメントを入力..."
+                                            className="flex min-h-[100px] w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors resize-none"
+                                            value={newComment.message}
+                                            onChange={(e) =>
+                                                setNewComment({ ...newComment, message: e.target.value })
+                                            }
+                                        />
                                     </div>
 
-                                    <div className="space-y-4">
-                                        {/* Message Input */}
-                                        <div className="space-y-1.5">
-                                            <label className="text-xs font-semibold text-gray-700">
-                                                Message
-                                            </label>
-                                            <textarea
-                                                placeholder="コメントを入力..."
-                                                className="flex min-h-[100px] w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors resize-none"
-                                                value={newComment.message}
-                                                onChange={(e) =>
-                                                    setNewComment({ ...newComment, message: e.target.value })
-                                                }
-                                            />
-                                        </div>
+                                    {/* Name Input */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-gray-700">
+                                            Your Name <span className="text-gray-400 font-normal">(Optional)</span>
+                                        </label>
+                                        <Input
+                                            placeholder="名前を入力..."
+                                            className="rounded-lg border-gray-200 bg-gray-50 focus:bg-white h-10"
+                                            value={newComment.authorName}
+                                            onChange={(e) =>
+                                                setNewComment({ ...newComment, authorName: e.target.value })
+                                            }
+                                        />
+                                    </div>
 
-                                        {/* Name Input */}
-                                        <div className="space-y-1.5">
-                                            <label className="text-xs font-semibold text-gray-700">
-                                                Your Name <span className="text-gray-400 font-normal">(Optional)</span>
-                                            </label>
-                                            <Input
-                                                placeholder="名前を入力..."
-                                                className="rounded-lg border-gray-200 bg-gray-50 focus:bg-white h-10"
-                                                value={newComment.authorName}
-                                                onChange={(e) =>
-                                                    setNewComment({ ...newComment, authorName: e.target.value })
-                                                }
-                                            />
-                                        </div>
-
-                                        {/* Category & Status */}
-                                        <div className="space-y-1.5">
-                                            <label className="text-xs font-semibold text-gray-700">
-                                                Category & Status
-                                            </label>
-                                            <div className="flex gap-2">
-                                                <select
-                                                    className={cn(
-                                                        "flex-1 h-9 text-sm font-semibold px-4 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-offset-0",
-                                                        newComment.category === "coding"
-                                                            ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                                                            : "bg-orange-100 text-orange-800 hover:bg-orange-200"
-                                                    )}
-                                                    value={newComment.category}
-                                                    onChange={(e) => setNewComment({ ...newComment, category: e.target.value as 'coding' | 'design' })}
-                                                >
-                                                    <option value="coding">コーディング</option>
-                                                    <option value="design">デザイン</option>
-                                                </select>
-                                                <select
-                                                    className={cn(
-                                                        "flex-1 h-9 text-sm font-semibold px-4 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-offset-0",
-                                                        newComment.status === "completed"
-                                                            ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
-                                                            : newComment.status === "in-progress"
-                                                                ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                                                                : "bg-red-100 text-red-800 hover:bg-red-200"
-                                                    )}
-                                                    value={newComment.status}
-                                                    onChange={(e) => setNewComment({ ...newComment, status: e.target.value as Comment['status'] })}
-                                                >
-                                                    <option value="pending">未対応</option>
-                                                    <option value="in-progress">対応中</option>
-                                                    <option value="completed">完了</option>
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        {/* Action Buttons */}
-                                        <div className="flex justify-end gap-2 pt-2">
-                                            <Button
-                                                variant="ghost"
-                                                size="default"
-                                                onClick={handleCancel}
-                                                className="h-9 px-4 text-gray-600 hover:text-gray-900"
+                                    {/* Category & Status */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-gray-700">
+                                            Category & Status
+                                        </label>
+                                        <div className="flex gap-2">
+                                            <select
+                                                className={cn(
+                                                    "flex-1 h-9 text-sm font-semibold px-4 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-offset-0",
+                                                    newComment.category === "coding"
+                                                        ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                                                        : "bg-orange-100 text-orange-800 hover:bg-orange-200"
+                                                )}
+                                                value={newComment.category}
+                                                onChange={(e) => setNewComment({ ...newComment, category: e.target.value as 'coding' | 'design' })}
                                             >
-                                                Cancel
-                                            </Button>
-                                            <Button
-                                                variant="default"
-                                                size="default"
-                                                onClick={handleSave}
-                                                className="h-9 px-5 bg-blue-600 hover:bg-blue-700 text-white shadow-sm rounded-lg"
+                                                <option value="coding">コーディング</option>
+                                                <option value="design">デザイン</option>
+                                            </select>
+                                            <select
+                                                className={cn(
+                                                    "flex-1 h-9 text-sm font-semibold px-4 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-offset-0",
+                                                    newComment.status === "completed"
+                                                        ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                                                        : newComment.status === "in-progress"
+                                                            ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                                                            : "bg-red-100 text-red-800 hover:bg-red-200"
+                                                )}
+                                                value={newComment.status}
+                                                onChange={(e) => setNewComment({ ...newComment, status: e.target.value as Comment['status'] })}
                                             >
-                                                Save
-                                            </Button>
+                                                <option value="pending">未対応</option>
+                                                <option value="in-progress">対応中</option>
+                                                <option value="completed">完了</option>
+                                            </select>
                                         </div>
+                                    </div>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex justify-end gap-2 pt-2">
+                                        <Button
+                                            variant="ghost"
+                                            size="default"
+                                            onClick={handleCancel}
+                                            className="h-9 px-4 text-gray-600 hover:text-gray-900"
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            variant="default"
+                                            size="default"
+                                            onClick={handleSave}
+                                            className="h-9 px-5 bg-blue-600 hover:bg-blue-700 text-white shadow-sm rounded-lg"
+                                        >
+                                            Save
+                                        </Button>
                                     </div>
                                 </div>
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
-    );
+    </div>
+);
 }
