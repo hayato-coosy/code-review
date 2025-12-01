@@ -68,11 +68,11 @@ export function AnnotationToolbar({
                         className={cn(
                             "px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2",
                             mode === "live"
-                                ? "bg-white text-gray-900 shadow-sm ring-1 ring-black/5"
+                                ? "bg-white text-gray-900 shadow-sm ring-1 ring-black/5 font-semibold"
                                 : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
                         )}
                     >
-                        <Globe className="w-4 h-4" />
+                        <Globe className={cn("w-4 h-4", mode === "live" ? "text-blue-600" : "text-gray-400")} />
                         Live
                     </button>
                     <button
@@ -80,11 +80,11 @@ export function AnnotationToolbar({
                         className={cn(
                             "px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2",
                             mode === "screenshot"
-                                ? "bg-white text-gray-900 shadow-sm ring-1 ring-black/5"
+                                ? "bg-white text-gray-900 shadow-sm ring-1 ring-black/5 font-semibold"
                                 : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
                         )}
                     >
-                        <ImageIcon className="w-4 h-4" />
+                        <ImageIcon className={cn("w-4 h-4", mode === "screenshot" ? "text-blue-600" : "text-gray-400")} />
                         Review
                     </button>
                 </div>
@@ -100,8 +100,10 @@ export function AnnotationToolbar({
                             size="sm"
                             onClick={() => onViewportChange("desktop")}
                             className={cn(
-                                "h-8 px-2 text-xs gap-1.5",
-                                viewport === "desktop" ? "bg-white shadow-sm text-gray-900" : "text-gray-500"
+                                "h-8 px-3 text-xs gap-1.5 transition-all",
+                                viewport === "desktop"
+                                    ? "bg-gray-900 text-white shadow-sm hover:bg-gray-800 hover:text-white"
+                                    : "text-gray-500 hover:bg-gray-200/50"
                             )}
                         >
                             <Monitor className="w-3.5 h-3.5" />
@@ -112,8 +114,10 @@ export function AnnotationToolbar({
                             size="sm"
                             onClick={() => onViewportChange("mobile")}
                             className={cn(
-                                "h-8 px-2 text-xs gap-1.5",
-                                viewport === "mobile" ? "bg-white shadow-sm text-gray-900" : "text-gray-500"
+                                "h-8 px-3 text-xs gap-1.5 transition-all",
+                                viewport === "mobile"
+                                    ? "bg-gray-900 text-white shadow-sm hover:bg-gray-800 hover:text-white"
+                                    : "text-gray-500 hover:bg-gray-200/50"
                             )}
                         >
                             <Smartphone className="w-3.5 h-3.5" />
@@ -132,8 +136,10 @@ export function AnnotationToolbar({
                                     size="sm"
                                     onClick={() => onPinModeChange(false)}
                                     className={cn(
-                                        "h-8 px-2 text-xs gap-1.5",
-                                        !isPinMode ? "bg-white shadow-sm text-blue-600" : "text-gray-500"
+                                        "h-8 px-3 text-xs gap-1.5 transition-all",
+                                        !isPinMode
+                                            ? "bg-blue-100 text-blue-700 shadow-sm hover:bg-blue-200 hover:text-blue-800 font-medium"
+                                            : "text-gray-500 hover:bg-gray-200/50"
                                     )}
                                 >
                                     <MousePointer2 className="w-3.5 h-3.5" />
@@ -144,8 +150,10 @@ export function AnnotationToolbar({
                                     size="sm"
                                     onClick={() => onPinModeChange(true)}
                                     className={cn(
-                                        "h-8 px-2 text-xs gap-1.5",
-                                        isPinMode ? "bg-white shadow-sm text-red-600" : "text-gray-500"
+                                        "h-8 px-3 text-xs gap-1.5 transition-all",
+                                        isPinMode
+                                            ? "bg-red-100 text-red-700 shadow-sm hover:bg-red-200 hover:text-red-800 font-medium"
+                                            : "text-gray-500 hover:bg-gray-200/50"
                                     )}
                                 >
                                     <MapPin className="w-3.5 h-3.5" />
@@ -184,7 +192,7 @@ export function AnnotationToolbar({
                                     size="sm"
                                     onClick={() => viewport === 'desktop' ? desktopInputRef.current?.click() : mobileInputRef.current?.click()}
                                     disabled={isTakingScreenshot}
-                                    className="h-9 px-3 text-xs gap-2 border-dashed"
+                                    className="h-9 px-3 text-xs gap-2 border-dashed hover:bg-gray-50"
                                 >
                                     <Upload className="w-3.5 h-3.5" />
                                     Upload {viewport === 'desktop' ? 'PC' : 'SP'}
@@ -195,7 +203,7 @@ export function AnnotationToolbar({
                                     disabled={isTakingScreenshot}
                                     size="sm"
                                     className={cn(
-                                        "h-9 px-3 text-xs gap-2 bg-gray-900 text-white hover:bg-gray-800",
+                                        "h-9 px-3 text-xs gap-2 bg-gray-900 text-white hover:bg-gray-800 shadow-sm",
                                         isTakingScreenshot && "opacity-80"
                                     )}
                                 >
@@ -214,8 +222,10 @@ export function AnnotationToolbar({
                             size="icon"
                             onClick={onToggleOverlay}
                             className={cn(
-                                "h-9 w-9 rounded-lg",
-                                isOverlayMode ? "text-blue-600 bg-blue-50" : "text-gray-500"
+                                "h-9 w-9 rounded-lg transition-all",
+                                isOverlayMode
+                                    ? "bg-gray-900 text-white shadow-sm hover:bg-gray-800 hover:text-white"
+                                    : "text-gray-500 hover:bg-gray-100"
                             )}
                             title="Toggle Overlay"
                         >
