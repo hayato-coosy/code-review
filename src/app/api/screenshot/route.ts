@@ -50,7 +50,15 @@ export async function POST(request: NextRequest) {
                 // Configure sparticuz/chromium-min
 
                 browser = await puppeteerCore.launch({
-                    args: [...chromium.args, '--hide-scrollbars', '--disable-web-security', '--ignore-certificate-errors'],
+                    args: [
+                        ...chromium.args,
+                        '--hide-scrollbars',
+                        '--disable-web-security',
+                        '--ignore-certificate-errors',
+                        '--disable-dev-shm-usage',
+                        '--disable-gpu',
+                        '--no-zygote'
+                    ],
                     executablePath: await chromium.executablePath('https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar'),
                     headless: true,
                 });
@@ -81,7 +89,7 @@ export async function POST(request: NextRequest) {
         await page.setViewport({
             width: isMobile ? 375 : 1280,
             height: 800,
-            deviceScaleFactor: 2,
+            deviceScaleFactor: 1, // Reduced from 2 to 1 to prevent OOM crashes on Vercel
             isMobile: isMobile,
             hasTouch: isMobile
         });
