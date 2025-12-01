@@ -626,10 +626,18 @@ export function AnnotationCanvas({
                         />
                     )}
 
-                    {/* Dark overlay when overlay mode is on or in image mode */}
-                    {(isOverlayMode || isImageMode) && (
+                    {/* Dark overlay when overlay mode is on */}
+                    {isOverlayMode && (
                         <div
                             className="absolute inset-0 w-full h-full pointer-events-none z-10"
+                            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+                        />
+                    )}
+
+                    {/* Dark overlay for image mode */}
+                    {isImageMode && (
+                        <div
+                            className="absolute inset-0 w-full h-full pointer-events-none z-15"
                             style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
                         />
                     )}
