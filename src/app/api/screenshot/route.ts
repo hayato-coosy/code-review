@@ -136,12 +136,30 @@ export async function POST(request: NextRequest) {
             };
         });
 
+        // Limit height to prevent memory crash (max 3000px)
+        const MAX_HEIGHT = 3000;
+        const captureHeight = Math.min(dimensions.height, MAX_HEIGHT);
+
+        // Resize viewport to capture content
+        await page.setViewport({
+            width: isMobile ? 375 : 1280,
+            height: captureHeight,
+            deviceScaleFactor: 1,
+            isMobile: isMobile,
+            hasTouch: isMobile
+        });
+
         // Take screenshot
         const base64Body = await page.screenshot({
-            fullPage: true,
             type: 'jpeg',
-            quality: 80,
-            encoding: 'base64'
+            quality: 60, // Reduce quality to save memory
+            encoding: 'base64',
+            clip: {
+                x: 0,
+                y: 0,
+                width: isMobile ? 375 : 1280,
+                height: captureHeight
+            }
         });
 
         await browser.close();
@@ -152,8 +170,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             screenshot: base64Image,
             isIframeAllowed,
-            width: dimensions.width,
-            height: dimensions.height
+            width: isMobile ? 375 : 1280,
+            height: captureHeight
         });
 
     } catch (error: any) {
