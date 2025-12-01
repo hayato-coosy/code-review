@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import chromium from "@sparticuz/chromium";
+import chromium from "@sparticuz/chromium-min";
 import puppeteerCore from "puppeteer-core";
 
 export const maxDuration = 60; // Increase timeout to 60 seconds
@@ -47,11 +47,11 @@ export async function POST(request: NextRequest) {
         try {
             if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_VERSION) {
                 // Production (Vercel/Lambda)
-                // Configure sparticuz/chromium
+                // Configure sparticuz/chromium-min
 
                 browser = await puppeteerCore.launch({
                     args: [...chromium.args, '--hide-scrollbars', '--disable-web-security', '--ignore-certificate-errors'],
-                    executablePath: await chromium.executablePath(),
+                    executablePath: await chromium.executablePath('https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar'),
                     headless: true,
                 });
             } else {
