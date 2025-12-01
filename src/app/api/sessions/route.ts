@@ -13,6 +13,18 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        try {
+            const url = new URL(targetUrl);
+            if (!['http:', 'https:'].includes(url.protocol)) {
+                throw new Error('Invalid protocol');
+            }
+        } catch (e) {
+            return NextResponse.json(
+                { error: "Invalid URL format" },
+                { status: 400 }
+            );
+        }
+
         const session = await store.sessions.create(targetUrl);
         return NextResponse.json(session, { status: 201 });
     } catch (error) {

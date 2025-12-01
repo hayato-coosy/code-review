@@ -4,9 +4,7 @@ const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 if (!supabaseUrl || !supabaseServiceRoleKey) {
-    if (typeof window === 'undefined') { // Only warn on server
-        console.warn('Supabase credentials missing. Check .env.local');
-    }
+    throw new Error('Supabase credentials missing. Check .env.local');
 }
 
 // Ensure this client is only used on the server

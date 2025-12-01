@@ -1,10 +1,11 @@
 import { Comment, Session } from "@/types";
 import { supabase } from "./supabase";
+import { v4 as uuidv4 } from 'uuid';
 
 export const store = {
     sessions: {
         create: async (targetUrl: string): Promise<Session> => {
-            const id = Math.random().toString(36).substring(2, 9);
+            const id = uuidv4();
             const newSession: Session = {
                 id,
                 targetUrl,
@@ -83,7 +84,7 @@ export const store = {
             }));
         },
         create: async (data: Omit<Comment, "id" | "createdAt">): Promise<Comment> => {
-            const id = Math.random().toString(36).substring(2, 9);
+            const id = uuidv4();
             const newComment: Comment = {
                 id,
                 createdAt: new Date().toISOString(),

@@ -534,7 +534,7 @@ export function AnnotationCanvas({
                         src={targetUrl}
                         className="absolute inset-0 w-full h-full border-0"
                         title="Target Website"
-                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                        sandbox="allow-scripts allow-popups allow-forms"
                     />
 
                     {/* Dark overlay when overlay mode is on */}
