@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, MouseEvent } from "react";
+import { useState, useRef, MouseEvent, useEffect } from "react";
 import { Comment } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +38,64 @@ export function AnnotationCanvas({
     canvasHeight,
     onCanvasHeightChange,
 }: AnnotationCanvasProps) {
+    // Screenshot state
+    const [isImageMode, setIsImageMode] = useState(false);
+    const [screenshots, setScreenshots] = useState<{
+        desktop: { url: string; height: number } | null;
+        mobile: { url: string; height: number } | null;
+    }>({ desktop: null, mobile: null });
+    const [isTakingScreenshot, setIsTakingScreenshot] = useState(false);
+
+    const handleTakeScreenshot = async () => {
+        setIsTakingScreenshot(true);
+        try {
+            const [desktopRes, mobileRes] = await Promise.all([
+                fetch('/api/screenshot', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ targetUrl, viewport: 'desktop' })
+                }),
+                fetch('/api/screenshot', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ targetUrl, viewport: 'mobile' })
+                })
+            ]);
+
+            if (!desktopRes.ok || !mobileRes.ok) throw new Error('Failed to take screenshot');
+
+            const desktopData = await desktopRes.json();
+            const mobileData = await mobileRes.json();
+
+            setScreenshots({
+                desktop: { url: desktopData.screenshot, height: desktopData.height },
+                mobile: { url: mobileData.screenshot, height: mobileData.height }
+            });
+            setIsImageMode(true);
+
+            // Initial height set based on current viewport
+            const currentData = viewport === 'mobile' ? mobileData : desktopData;
+            if (currentData.height && onCanvasHeightChange) {
+                onCanvasHeightChange(currentData.height);
+            }
+        } catch (error) {
+            console.error(error);
+            alert('スクリーンショットの取得に失敗しました');
+        } finally {
+            setIsTakingScreenshot(false);
+        }
+    };
+
+    // Update height when viewport changes in image mode
+    useEffect(() => {
+        if (isImageMode && screenshots.desktop && screenshots.mobile) {
+            const currentData = viewport === 'mobile' ? screenshots.mobile : screenshots.desktop;
+            if (currentData?.height && onCanvasHeightChange && currentData.height !== canvasHeight) {
+                onCanvasHeightChange(currentData.height);
+            }
+        }
+    }, [viewport, isImageMode, screenshots, onCanvasHeightChange, canvasHeight]);
+
     const [isPinMode, setIsPinMode] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
@@ -468,12 +526,35 @@ export function AnnotationCanvas({
                         <PlusCircle className="h-5 w-5" />
                         {isPinMode ? "ピンモード: ON" : "ピンモード: OFF"}
                     </Button>
+
+                    <Button
+                        variant={isImageMode ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                            if (!screenshots.desktop && !isImageMode) {
+                                handleTakeScreenshot();
+                            } else {
+                                setIsImageMode(!isImageMode);
+                            }
+                        }}
+                        disabled={isTakingScreenshot}
+                        className="gap-2"
+                    >
+                        {isTakingScreenshot ? (
+                            <span className="animate-spin">⌛</span>
+                        ) : (
+                            <span className="text-lg">📷</span>
+                        )}
+                        {isImageMode ? "画像モード: ON" : "画像モード: OFF"}
+                    </Button>
+
                     <span className="text-sm text-muted-foreground">
                         {isPinMode ? "クリックまたはドラッグでコメントを追加・移動" : "閲覧モード"}
                     </span>
                 </div>
 
                 <div className="flex items-center gap-2">
+                    {/* ... existing buttons ... */}
                     <Button
                         variant={isOverlayMode ? "default" : "outline"}
                         size="sm"
@@ -529,13 +610,21 @@ export function AnnotationCanvas({
                     )}
                     style={{ height: `${currentHeight}px` }}
                 >
-                    {/* Iframe */}
-                    <iframe
-                        src={targetUrl}
-                        className="absolute inset-0 w-full h-full border-0"
-                        title="Target Website"
-                        sandbox="allow-scripts allow-popups allow-forms"
-                    />
+                    {isImageMode && (viewport === 'mobile' ? screenshots.mobile : screenshots.desktop) ? (
+                        <img
+                            src={(viewport === 'mobile' ? screenshots.mobile : screenshots.desktop)?.url}
+                            alt="Site Screenshot"
+                            className="absolute inset-0 w-full h-auto object-contain"
+                            style={{ minHeight: '100%' }}
+                        />
+                    ) : (
+                        <iframe
+                            src={targetUrl}
+                            className="absolute inset-0 w-full h-full border-0"
+                            title="Target Website"
+                            sandbox="allow-scripts allow-popups allow-forms"
+                        />
+                    )}
 
                     {/* Dark overlay when overlay mode is on */}
                     {isOverlayMode && (
