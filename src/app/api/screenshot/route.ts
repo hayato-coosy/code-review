@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import puppeteer from "puppeteer";
+import chromium from "@sparticuz/chromium";
+import puppeteerCore from "puppeteer-core";
 
 export async function POST(request: NextRequest) {
     try {
@@ -37,11 +38,38 @@ export async function POST(request: NextRequest) {
         }
 
         // Launch puppeteer
-        const browser = await puppeteer.launch({
-            headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
-        const page = await browser.newPage();
+        let browser;
+        let page;
+
+        try {
+            if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_VERSION) {
+                // Production (Vercel/Lambda)
+                // Configure sparticuz/chromium
+                chromium.setGraphicsMode = false;
+
+                browser = await puppeteerCore.launch({
+                    args: [...chromium.args, '--hide-scrollbars', '--disable-web-security', '--ignore-certificate-errors'],
+                    defaultViewport: chromium.defaultViewport as any,
+                    executablePath: await chromium.executablePath(),
+                    headless: chromium.headless as any,
+                });
+            } else {
+                // Local development
+                const puppeteer = await import("puppeteer");
+                browser = await puppeteer.default.launch({
+                    headless: true,
+                    args: ['--no-sandbox', '--disable-setuid-sandbox']
+                });
+            }
+
+            page = await browser.newPage();
+        } catch (launchError: any) {
+            console.error("Browser launch failed:", launchError);
+            return NextResponse.json(
+                { error: "Failed to initialize browser", details: launchError.message },
+                { status: 500 }
+            );
+        }
 
         // Set viewport based on requested device
         const isMobile = viewport === 'mobile';
