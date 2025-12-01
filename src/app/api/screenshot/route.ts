@@ -49,9 +49,8 @@ export async function POST(request: NextRequest) {
 
                 browser = await puppeteerCore.launch({
                     args: [...chromium.args, '--hide-scrollbars', '--disable-web-security', '--ignore-certificate-errors'],
-                    defaultViewport: chromium.defaultViewport as any,
                     executablePath: await chromium.executablePath(),
-                    headless: chromium.headless as any,
+                    headless: true,
                 });
             } else {
                 // Local development
