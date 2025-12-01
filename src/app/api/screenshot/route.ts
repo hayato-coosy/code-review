@@ -64,8 +64,7 @@ export async function POST(request: NextRequest) {
         screenshotApiUrl.searchParams.set('full_page', 'false');
         screenshotApiUrl.searchParams.set('block_cookie_banners', 'true');
         screenshotApiUrl.searchParams.set('block_chats', 'true');
-        screenshotApiUrl.searchParams.set('accept_language', 'ja-JP');
-        screenshotApiUrl.searchParams.set('time_zone', 'Asia/Tokyo');
+        screenshotApiUrl.searchParams.set('time_zone', 'Asia/Shanghai');
 
         // Call ScreenshotOne API
         const screenshotResponse = await fetch(screenshotApiUrl.toString(), {
