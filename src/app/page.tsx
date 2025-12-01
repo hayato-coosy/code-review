@@ -65,6 +65,12 @@ export default function Home() {
                 "Open Page"
               )}
             </Button>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2">
+              <p className="text-xs text-amber-800">
+                <strong>⚠️ 保存期間について:</strong> セッションは作成から30日後に自動的に削除されます。
+                長期保存が必要な場合は、画像を個別にダウンロードしてください。
+              </p>
+            </div>
             <p className="text-xs text-muted-foreground text-center">
               Note: Some websites may block embedding via iframe.
             </p>
