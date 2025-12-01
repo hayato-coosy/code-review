@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: screenshot-service
+    env: node
+    buildCommand: cd screenshot-service && npm install
+    startCommand: cd screenshot-service && npm start
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
