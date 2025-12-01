@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Comment } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Copy, Filter, Eye, EyeOff, X } from "lucide-react";
+import { Copy, Filter, Eye, EyeOff, X, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CommentSidebarProps {
@@ -36,6 +36,28 @@ export function CommentSidebar({
     const [width, setWidth] = useState(320);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isResizing, setIsResizing] = useState(false);
+
+    // Edit state
+    const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+    const [editMessage, setEditMessage] = useState<string>("");
+
+    const handleStartEdit = (comment: Comment) => {
+        setEditingCommentId(comment.id);
+        setEditMessage(comment.message);
+    };
+
+    const handleCancelEdit = () => {
+        setEditingCommentId(null);
+        setEditMessage("");
+    };
+
+    const handleSaveEdit = async (commentId: string) => {
+        if (!editMessage.trim()) return;
+
+        await onUpdateComment?.(commentId, { message: editMessage });
+        setEditingCommentId(null);
+        setEditMessage("");
+    };
 
     // Resize logic
     const handleMouseDown = (e: React.MouseEvent) => {
@@ -89,7 +111,7 @@ export function CommentSidebar({
     return (
         <div
             className={cn(
-                "flex h-full flex-col border-l border-gray-700 bg-[#333] text-white shadow-xl transition-all duration-300 ease-in-out relative",
+                "flex h-full flex-col border-l border-gray-200 bg-white text-gray-900 shadow-xl transition-all duration-300 ease-in-out relative",
                 // Mobile: Fixed overlay
                 // Desktop: Always relative, but with higher z-index to ensure button is clickable
                 "fixed right-0 top-0 z-50 md:relative md:z-20 md:inset-auto",
@@ -111,7 +133,7 @@ export function CommentSidebar({
 
             {/* Collapse/Expand Button */}
             <button
-                className="absolute -left-6 top-1/2 -translate-y-1/2 bg-[#333] border border-gray-700 border-r-0 rounded-l-md p-1 text-gray-400 hover:text-white hidden md:flex items-center justify-center h-12 w-6 shadow-md z-40"
+                className="absolute -left-6 top-1/2 -translate-y-1/2 bg-white border border-gray-200 border-r-0 rounded-l-md p-1 text-gray-500 hover:text-gray-900 hidden md:flex items-center justify-center h-12 w-6 shadow-md z-40"
                 onClick={() => setIsCollapsed(!isCollapsed)}
                 title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
             >
@@ -124,14 +146,14 @@ export function CommentSidebar({
 
             {/* Content Wrapper */}
             <div className={cn("flex-1 flex flex-col w-full overflow-hidden", isCollapsed && "hidden")}>
-                <div className="flex items-center justify-between border-b border-gray-700 p-4 min-w-[320px]">
-                    <h2 className="text-lg font-semibold text-white">コメント ({comments.length})</h2>
+                <div className="flex items-center justify-between border-b border-gray-200 p-4 min-w-[320px]">
+                    <h2 className="text-lg font-semibold text-gray-900">コメント ({comments.length})</h2>
                     {onToggleOverlay && (
                         <Button
                             variant="ghost"
                             size="icon"
                             onClick={onToggleOverlay}
-                            className="text-gray-400 hover:text-white hover:bg-gray-700"
+                            className="text-gray-500 hover:text-gray-900 hover:bg-gray-100"
                             title={isOverlayMode ? "暗転解除" : "暗転モード"}
                         >
                             {isOverlayMode ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -140,16 +162,16 @@ export function CommentSidebar({
                 </div>
 
                 {/* Viewport Tabs */}
-                <div className="flex border-b border-gray-700 min-w-[320px]">
+                <div className="flex border-b border-gray-200 min-w-[320px]">
                     <Button
                         variant="ghost"
                         size="default"
                         onClick={() => onTabChange?.("desktop")}
                         className={cn(
-                            "flex-1 rounded-none py-3 text-base font-medium transition-all",
+                            "flex-1 rounded-none py-3 text-sm font-medium transition-all",
                             activeTab === "desktop"
-                                ? "border-b-2 border-blue-500 bg-blue-600 text-white hover:bg-blue-700"
-                                : "text-gray-400 hover:text-white hover:bg-[#444]"
+                                ? "border-b-2 border-blue-500 text-blue-600 bg-blue-50/50"
+                                : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
                         )}
                     >
                         PC
@@ -159,20 +181,20 @@ export function CommentSidebar({
                         size="default"
                         onClick={() => onTabChange?.("mobile")}
                         className={cn(
-                            "flex-1 rounded-none py-3 text-base font-medium transition-all",
+                            "flex-1 rounded-none py-3 text-sm font-medium transition-all",
                             activeTab === "mobile"
-                                ? "border-b-2 border-blue-500 bg-blue-600 text-white hover:bg-blue-700"
-                                : "text-gray-400 hover:text-white hover:bg-[#444]"
+                                ? "border-b-2 border-blue-500 text-blue-600 bg-blue-50/50"
+                                : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
                         )}
                     >
                         SP
                     </Button>
                 </div>
 
-                <div className="border-b border-gray-700 p-4 space-y-4 min-w-[320px]">
+                <div className="border-b border-gray-200 p-4 space-y-4 min-w-[320px]">
                     <Button
                         variant="outline"
-                        className="w-full gap-2 bg-[#444] text-white border-gray-600 hover:bg-[#555] hover:text-white"
+                        className="w-full gap-2 bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                         onClick={handleCopyLink}
                     >
                         <Copy className="h-4 w-4" />
@@ -180,14 +202,14 @@ export function CommentSidebar({
                     </Button>
                 </div>
 
-                <div className="border-b border-gray-600 p-5 space-y-4 min-w-[320px]">
-                    <div className="flex items-center gap-2 text-base font-medium text-gray-200">
-                        <Filter className="h-5 w-5" />
+                <div className="border-b border-gray-200 p-4 space-y-3 min-w-[320px] bg-gray-50/50">
+                    <div className="flex items-center gap-2 text-sm font-medium text-gray-600">
+                        <Filter className="h-4 w-4" />
                         フィルター
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-2">
                         <select
-                            className="flex h-9 w-full rounded-md border border-gray-600 bg-[#444] text-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
+                            className="flex h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
                             value={filterCategory}
                             onChange={(e) => setFilterCategory(e.target.value)}
                         >
@@ -196,7 +218,7 @@ export function CommentSidebar({
                             <option value="design">デザイン</option>
                         </select>
                         <select
-                            className="flex h-9 w-full rounded-md border border-gray-600 bg-[#444] text-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
+                            className="flex h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
                             value={filterStatus}
                             onChange={(e) => setFilterStatus(e.target.value)}
                         >
@@ -206,75 +228,135 @@ export function CommentSidebar({
                             <option value="completed">完了</option>
                         </select>
                     </div>
-                    <label className="flex items-center gap-2 text-sm text-gray-200">
+                    <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
                         <input
                             type="checkbox"
                             checked={showCompleted}
                             onChange={(e) => setShowCompleted(e.target.checked)}
-                            className="h-4 w-4 rounded border-gray-600 bg-[#444] checked:bg-blue-500"
+                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
-                        Show completed
+                        完了したコメントを表示
                     </label>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 min-w-[320px]">
+                <div className="flex-1 overflow-y-auto min-w-[320px]">
                     {filteredComments.length === 0 ? (
-                        <p className="text-center text-sm text-gray-400 py-8">
-                            No comments found.
-                        </p>
+                        <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                            <p className="text-sm">No comments found.</p>
+                        </div>
                     ) : (
-                        filteredComments.map((comment) => (
-                            <Card
-                                key={comment.id}
-                                className={cn(
-                                    "overflow-hidden bg-[#444] border-gray-600 text-white cursor-pointer hover:bg-[#555] transition-colors",
-                                    comment.isCompleted && "opacity-60"
-                                )}
-                                onClick={() => onCommentClick?.(comment)}
-                            >
-                                <CardHeader className="p-4">
-                                    <div className="flex items-start justify-between gap-3 mb-2">
-                                        <CardTitle className={cn("text-base font-medium text-gray-100 leading-relaxed flex-1", comment.isCompleted && "line-through")}>
-                                            {comment.message}
-                                        </CardTitle>
-                                        <select
+                        <div className="divide-y divide-gray-100">
+                            {filteredComments.map((comment) => (
+                                <div
+                                    key={comment.id}
+                                    className={cn(
+                                        "group flex gap-3 p-4 hover:bg-gray-50 transition-colors cursor-pointer",
+                                        comment.isCompleted && "opacity-60 bg-gray-50"
+                                    )}
+                                    onClick={() => onCommentClick?.(comment)}
+                                >
+                                    {/* Avatar */}
+                                    <div className="flex-shrink-0">
+                                        <div
                                             className={cn(
-                                                "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1 bg-transparent",
+                                                "flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold",
                                                 comment.status === "completed"
-                                                    ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                                                    ? "bg-gray-200 text-gray-700 border-gray-400"
                                                     : comment.status === "in-progress"
-                                                        ? "bg-blue-900/30 text-blue-300 hover:bg-blue-900/50"
-                                                        : "bg-red-900/30 text-red-300 hover:bg-red-900/50"
+                                                        ? "bg-blue-100 text-blue-800 border-blue-400"
+                                                        : "bg-red-100 text-red-800 border-red-400"
                                             )}
-                                            value={comment.status}
-                                            onChange={(e) => onUpdateComment?.(comment.id, { status: e.target.value as any })}
-                                            onClick={(e) => e.stopPropagation()}
                                         >
-                                            <option value="pending" className="bg-[#333]">未対応</option>
-                                            <option value="in-progress" className="bg-[#333]">対応中</option>
-                                            <option value="completed" className="bg-[#333]">完了</option>
-                                        </select>
+                                            {comment.authorName ? comment.authorName.slice(0, 2).toUpperCase() : "AN"}
+                                        </div>
                                     </div>
-                                    <div className="flex items-center justify-between text-xs text-gray-400">
-                                        <span>{comment.authorName || "Anonymous"}</span>
-                                        <span>{new Date(comment.createdAt).toLocaleTimeString()}</span>
+
+                                    {/* Content */}
+                                    <div className="flex-1 min-w-0 space-y-1">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm font-bold text-gray-900 truncate">
+                                                    {comment.authorName || "Anonymous"}
+                                                </span>
+                                                <span className="text-xs text-gray-400">
+                                                    {new Date(comment.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+
+                                            {/* Actions (visible on hover or if menu open) */}
+                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 text-gray-400 hover:text-gray-900"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleStartEdit(comment);
+                                                    }}
+                                                >
+                                                    <Pencil className="h-3 w-3" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className={cn(
+                                                        "h-6 w-6",
+                                                        comment.isCompleted ? "text-blue-600" : "text-gray-400 hover:text-blue-600"
+                                                    )}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onToggleComplete(comment.id, !comment.isCompleted);
+                                                    }}
+                                                    title={comment.isCompleted ? "Mark as incomplete" : "Mark as complete"}
+                                                >
+                                                    <div className={cn(
+                                                        "flex items-center justify-center w-4 h-4 rounded-full border border-current",
+                                                        comment.isCompleted && "bg-blue-600 border-blue-600 text-white"
+                                                    )}>
+                                                        {comment.isCompleted && <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="w-2 h-2"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                                                    </div>
+                                                </Button>
+                                            </div>
+                                        </div>
+
+                                        {editingCommentId === comment.id ? (
+                                            <div className="space-y-2 pt-1" onClick={(e) => e.stopPropagation()}>
+                                                <textarea
+                                                    className="w-full min-h-[60px] rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    value={editMessage}
+                                                    onChange={(e) => setEditMessage(e.target.value)}
+                                                    autoFocus
+                                                />
+                                                <div className="flex justify-end gap-2">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={handleCancelEdit}
+                                                        className="h-7 px-3 text-gray-500 hover:text-gray-900"
+                                                    >
+                                                        Cancel
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => handleSaveEdit(comment.id)}
+                                                        className="h-7 px-3 bg-blue-600 hover:bg-blue-700 text-white"
+                                                    >
+                                                        Save
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p className={cn(
+                                                "text-sm text-gray-900 leading-relaxed break-words",
+                                                comment.isCompleted && "line-through text-gray-500"
+                                            )}>
+                                                {comment.message}
+                                            </p>
+                                        )}
                                     </div>
-                                </CardHeader>
-                                <CardContent className="p-4 pt-0">
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={comment.isCompleted || false}
-                                            onChange={(e) => onToggleComplete(comment.id, e.target.checked)}
-                                            className="h-4 w-4 rounded border-gray-600 bg-[#555] checked:bg-blue-500"
-                                        />
-                                        <label className="text-xs text-gray-300 cursor-pointer">
-                                            Mark as completed
-                                        </label>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))
+                                </div>
+                            ))}
+                        </div>
                     )}
                 </div>
             </div>

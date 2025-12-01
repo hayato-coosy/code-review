@@ -56,9 +56,9 @@ export async function PATCH(
     const { id } = await params;
     try {
         const body = await request.json();
-        const { commentId, isCompleted, posX, posY, width, height, category, status } = body;
+        const { commentId, isCompleted, posX, posY, width, height, category, status, message } = body;
 
-        console.log("PATCH request - Session ID:", id, "Comment ID:", commentId, "Updates:", { isCompleted, posX, posY, width, height, category, status });
+        console.log("PATCH request - Session ID:", id, "Comment ID:", commentId, "Updates:", { isCompleted, posX, posY, width, height, category, status, message });
 
         if (!commentId) {
             return NextResponse.json(
@@ -75,6 +75,7 @@ export async function PATCH(
         if (height !== undefined) updates.height = height;
         if (category !== undefined) updates.category = category;
         if (status !== undefined) updates.status = status;
+        if (message !== undefined) updates.message = message;
 
         const updated = await store.comments.update(commentId, updates as Partial<Comment>);
         if (!updated) {

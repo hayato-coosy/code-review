@@ -4,7 +4,7 @@ import { useState, useRef, MouseEvent } from "react";
 import { Comment } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MapPin, X, PlusCircle, Eye, EyeOff, ArrowDown } from "lucide-react";
+import { MapPin, X, PlusCircle, Eye, EyeOff, ArrowDown, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AnnotationCanvasProps {
@@ -53,6 +53,28 @@ export function AnnotationCanvas({
     const [localActivePinId, setLocalActivePinId] = useState<string | null>(null);
     const activePinId = activeCommentId !== undefined ? activeCommentId : localActivePinId;
     const setActivePinId = onSetActiveComment || setLocalActivePinId;
+
+    // Edit state
+    const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+    const [editMessage, setEditMessage] = useState<string>("");
+
+    const handleStartEdit = (comment: Comment) => {
+        setEditingCommentId(comment.id);
+        setEditMessage(comment.message);
+    };
+
+    const handleCancelEdit = () => {
+        setEditingCommentId(null);
+        setEditMessage("");
+    };
+
+    const handleSaveEdit = async (commentId: string) => {
+        if (!editMessage.trim()) return;
+
+        await onUpdateComment?.(commentId, { message: editMessage });
+        setEditingCommentId(null);
+        setEditMessage("");
+    };
 
     // For moving existing pins/areas
     // For moving existing pins/areas
@@ -637,10 +659,10 @@ export function AnnotationCanvas({
                                                         className={cn(
                                                             "w-6 h-6 md:w-8 md:h-8 drop-shadow-lg",
                                                             comment.status === "completed"
-                                                                ? "text-gray-400 fill-gray-400"
+                                                                ? "text-gray-500 fill-gray-500"
                                                                 : comment.status === "in-progress"
-                                                                    ? "text-blue-500 fill-blue-500"
-                                                                    : "text-red-500 fill-red-500"
+                                                                    ? "text-blue-600 fill-blue-600"
+                                                                    : "text-red-600 fill-red-600"
                                                         )}
                                                     />
                                                 </div>
@@ -721,46 +743,131 @@ export function AnnotationCanvas({
                                             )}
 
                                             {activePinId === comment.id && (
-                                                <div className="absolute left-0 top-full z-10 mt-2 w-80 rounded-lg border bg-white p-5 shadow-xl" style={{ borderColor: statusColor }}>
-                                                    <div className="mb-4 flex items-center justify-between gap-2">
+                                                <div
+                                                    className="absolute z-50 w-80 rounded-xl border border-gray-100 bg-white p-4 shadow-2xl cursor-default"
+                                                    style={{
+                                                        ...getModalPosition({ x: comment.posX, y: comment.posY, width: comment.width, height: comment.height })
+                                                    }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    onMouseDown={(e) => e.stopPropagation()}
+                                                    onTouchStart={(e) => e.stopPropagation()}
+                                                >
+                                                    {/* Header: Author & Actions */}
+                                                    <div className="flex items-start justify-between mb-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <div
+                                                                className={cn(
+                                                                    "flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold",
+                                                                    comment.status === "completed"
+                                                                        ? "bg-gray-200 text-gray-700 border-gray-400"
+                                                                        : comment.status === "in-progress"
+                                                                            ? "bg-blue-100 text-blue-800 border-blue-400"
+                                                                            : "bg-red-100 text-red-800 border-red-400"
+                                                                )}
+                                                            >
+                                                                {comment.authorName ? comment.authorName.slice(0, 2).toUpperCase() : "AN"}
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-sm font-bold text-gray-900 leading-none">
+                                                                    {comment.authorName || "Anonymous"}
+                                                                </span>
+                                                                <span className="text-[10px] text-gray-400 mt-1">
+                                                                    {new Date(comment.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            {editingCommentId !== comment.id && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-7 w-7 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full"
+                                                                    onClick={() => handleStartEdit(comment)}
+                                                                    title="Edit comment"
+                                                                >
+                                                                    <Pencil className="h-3.5 w-3.5" />
+                                                                </Button>
+                                                            )}
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-7 w-7 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full"
+                                                                onClick={() => setActivePinId(null)}
+                                                                title="Close"
+                                                            >
+                                                                <X className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Body: Content */}
+                                                    <div className="mb-4">
+                                                        {editingCommentId === comment.id ? (
+                                                            <div className="space-y-3">
+                                                                <textarea
+                                                                    className="w-full min-h-[80px] rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors resize-none"
+                                                                    value={editMessage}
+                                                                    onChange={(e) => setEditMessage(e.target.value)}
+                                                                    autoFocus
+                                                                    placeholder="コメントを入力..."
+                                                                />
+                                                                <div className="flex justify-end gap-2">
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="ghost"
+                                                                        onClick={handleCancelEdit}
+                                                                        className="h-8 px-3 text-gray-500 hover:text-gray-900"
+                                                                    >
+                                                                        Cancel
+                                                                    </Button>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        onClick={() => handleSaveEdit(comment.id)}
+                                                                        className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white shadow-sm rounded-md"
+                                                                    >
+                                                                        Save
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                                                                {comment.message}
+                                                            </p>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Footer: Metadata Badges */}
+                                                    <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
                                                         <select
                                                             className={cn(
-                                                                "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1",
+                                                                "h-7 text-xs font-semibold px-3 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-offset-0 appearance-none text-center min-w-[90px]",
                                                                 comment.category === "coding"
-                                                                    ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                                                                    : "bg-orange-100 text-orange-700 hover:bg-orange-200"
+                                                                    ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                                                                    : "bg-orange-100 text-orange-800 hover:bg-orange-200"
                                                             )}
                                                             value={comment.category}
                                                             onChange={(e) => onUpdateComment?.(comment.id, { category: e.target.value as any })}
-                                                            onClick={(e) => e.stopPropagation()}
                                                         >
                                                             <option value="coding">コーディング</option>
                                                             <option value="design">デザイン</option>
                                                         </select>
                                                         <select
                                                             className={cn(
-                                                                "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1",
+                                                                "h-7 text-xs font-semibold px-3 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-offset-0 appearance-none text-center min-w-[75px]",
                                                                 comment.status === "completed"
-                                                                    ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                                                    ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
                                                                     : comment.status === "in-progress"
-                                                                        ? "bg-sky-100 text-sky-700 hover:bg-sky-200"
-                                                                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                                                        ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                                                                        : "bg-red-100 text-red-800 hover:bg-red-200"
                                                             )}
                                                             value={comment.status}
                                                             onChange={(e) => onUpdateComment?.(comment.id, { status: e.target.value as any })}
-                                                            onClick={(e) => e.stopPropagation()}
                                                         >
                                                             <option value="pending">未対応</option>
                                                             <option value="in-progress">対応中</option>
                                                             <option value="completed">完了</option>
                                                         </select>
                                                     </div>
-                                                    <p className="text-base font-medium text-gray-900 mb-2">{comment.message}</p>
-                                                    {comment.authorName && (
-                                                        <p className="text-sm text-gray-600">
-                                                            👤 {comment.authorName}
-                                                        </p>
-                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -810,46 +917,131 @@ export function AnnotationCanvas({
                                                 />
                                             </div>
                                             {activePinId === comment.id && (
-                                                <div className="absolute left-1/2 top-full z-10 mt-2 w-72 -translate-x-1/2 rounded-lg border bg-white p-4 shadow-xl" style={{ borderColor: statusColor }}>
-                                                    <div className="mb-3 flex items-center justify-between gap-2">
+                                                <div
+                                                    className="absolute z-50 w-80 rounded-xl border border-gray-100 bg-white p-4 shadow-2xl cursor-default"
+                                                    style={{
+                                                        ...getModalPosition({ x: comment.posX, y: comment.posY, width: comment.width, height: comment.height })
+                                                    }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    onMouseDown={(e) => e.stopPropagation()}
+                                                    onTouchStart={(e) => e.stopPropagation()}
+                                                >
+                                                    {/* Header: Author & Actions */}
+                                                    <div className="flex items-start justify-between mb-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <div
+                                                                className={cn(
+                                                                    "flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold",
+                                                                    comment.status === "completed"
+                                                                        ? "bg-gray-200 text-gray-700 border-gray-400"
+                                                                        : comment.status === "in-progress"
+                                                                            ? "bg-blue-100 text-blue-800 border-blue-400"
+                                                                            : "bg-red-100 text-red-800 border-red-400"
+                                                                )}
+                                                            >
+                                                                {comment.authorName ? comment.authorName.slice(0, 2).toUpperCase() : "AN"}
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-sm font-bold text-gray-900 leading-none">
+                                                                    {comment.authorName || "Anonymous"}
+                                                                </span>
+                                                                <span className="text-[10px] text-gray-400 mt-1">
+                                                                    {new Date(comment.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            {editingCommentId !== comment.id && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-7 w-7 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full"
+                                                                    onClick={() => handleStartEdit(comment)}
+                                                                    title="Edit comment"
+                                                                >
+                                                                    <Pencil className="h-3.5 w-3.5" />
+                                                                </Button>
+                                                            )}
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-7 w-7 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full"
+                                                                onClick={() => setActivePinId(null)}
+                                                                title="Close"
+                                                            >
+                                                                <X className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Body: Content */}
+                                                    <div className="mb-4">
+                                                        {editingCommentId === comment.id ? (
+                                                            <div className="space-y-3">
+                                                                <textarea
+                                                                    className="w-full min-h-[80px] rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors resize-none"
+                                                                    value={editMessage}
+                                                                    onChange={(e) => setEditMessage(e.target.value)}
+                                                                    autoFocus
+                                                                    placeholder="コメントを入力..."
+                                                                />
+                                                                <div className="flex justify-end gap-2">
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="ghost"
+                                                                        onClick={handleCancelEdit}
+                                                                        className="h-8 px-3 text-gray-500 hover:text-gray-900"
+                                                                    >
+                                                                        Cancel
+                                                                    </Button>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        onClick={() => handleSaveEdit(comment.id)}
+                                                                        className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white shadow-sm rounded-md"
+                                                                    >
+                                                                        Save
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                                                                {comment.message}
+                                                            </p>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Footer: Metadata Badges */}
+                                                    <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
                                                         <select
                                                             className={cn(
-                                                                "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1",
+                                                                "h-7 text-xs font-semibold px-3 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-offset-0 appearance-none text-center min-w-[90px]",
                                                                 comment.category === "coding"
-                                                                    ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                                                                    : "bg-orange-100 text-orange-700 hover:bg-orange-200"
+                                                                    ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                                                                    : "bg-orange-100 text-orange-800 hover:bg-orange-200"
                                                             )}
                                                             value={comment.category}
                                                             onChange={(e) => onUpdateComment?.(comment.id, { category: e.target.value as any })}
-                                                            onClick={(e) => e.stopPropagation()}
                                                         >
                                                             <option value="coding">コーディング</option>
                                                             <option value="design">デザイン</option>
                                                         </select>
                                                         <select
                                                             className={cn(
-                                                                "text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer focus:ring-1 focus:ring-offset-1",
+                                                                "h-7 text-xs font-semibold px-3 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-offset-0 appearance-none text-center min-w-[75px]",
                                                                 comment.status === "completed"
-                                                                    ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                                                    ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
                                                                     : comment.status === "in-progress"
-                                                                        ? "bg-sky-100 text-sky-700 hover:bg-sky-200"
-                                                                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                                                        ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                                                                        : "bg-red-100 text-red-800 hover:bg-red-200"
                                                             )}
                                                             value={comment.status}
                                                             onChange={(e) => onUpdateComment?.(comment.id, { status: e.target.value as any })}
-                                                            onClick={(e) => e.stopPropagation()}
                                                         >
                                                             <option value="pending">未対応</option>
                                                             <option value="in-progress">対応中</option>
                                                             <option value="completed">完了</option>
                                                         </select>
                                                     </div>
-                                                    <p className="text-base font-medium text-gray-900 mb-2">{comment.message}</p>
-                                                    {comment.authorName && (
-                                                        <p className="text-sm text-gray-600">
-                                                            👤 {comment.authorName}
-                                                        </p>
-                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -890,61 +1082,108 @@ export function AnnotationCanvas({
 
                                 {/* Comment Modal */}
                                 <div
-                                    className="absolute w-80 rounded-lg border bg-background p-4 shadow-lg bg-white z-20"
+                                    className="absolute w-96 rounded-xl border border-gray-100 bg-white p-5 shadow-2xl z-20"
                                     style={getModalPosition(tempPin)}
                                     onClick={(e) => e.stopPropagation()}
                                 >
-                                    <div className="mb-3 flex items-center justify-between">
-                                        <h4 className="font-semibold">Add Comment</h4>
+                                    {/* Header */}
+                                    <div className="mb-4 flex items-center justify-between">
+                                        <h3 className="text-lg font-bold text-gray-900">Add Comment</h3>
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-6 w-6"
+                                            className="h-7 w-7 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full"
                                             onClick={handleCancel}
                                         >
                                             <X className="h-4 w-4" />
                                         </Button>
                                     </div>
-                                    <div className="space-y-3">
-                                        <textarea
-                                            placeholder="Message"
-                                            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                                            value={newComment.message}
-                                            onChange={(e) =>
-                                                setNewComment({ ...newComment, message: e.target.value })
-                                            }
-                                        />
-                                        <Input
-                                            placeholder="Your Name (Optional)"
-                                            value={newComment.authorName}
-                                            onChange={(e) =>
-                                                setNewComment({ ...newComment, authorName: e.target.value })
-                                            }
-                                        />
-                                        <div className="flex gap-2">
-                                            <select
-                                                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                                value={newComment.category}
-                                                onChange={(e) => setNewComment({ ...newComment, category: e.target.value as 'coding' | 'design' })}
-                                            >
-                                                <option value="coding">コーディング</option>
-                                                <option value="design">デザイン</option>
-                                            </select>
-                                            <select
-                                                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                                value={newComment.status}
-                                                onChange={(e) => setNewComment({ ...newComment, status: e.target.value as Comment['status'] })}
-                                            >
-                                                <option value="pending">未対応</option>
-                                                <option value="in-progress">対応中</option>
-                                                <option value="completed">完了</option>
-                                            </select>
+
+                                    <div className="space-y-4">
+                                        {/* Message Input */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-semibold text-gray-700">
+                                                Message
+                                            </label>
+                                            <textarea
+                                                placeholder="コメントを入力..."
+                                                className="flex min-h-[100px] w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors resize-none"
+                                                value={newComment.message}
+                                                onChange={(e) =>
+                                                    setNewComment({ ...newComment, message: e.target.value })
+                                                }
+                                            />
                                         </div>
-                                        <div className="flex justify-end gap-2">
-                                            <Button variant="outline" size="sm" onClick={handleCancel}>
+
+                                        {/* Name Input */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-semibold text-gray-700">
+                                                Your Name <span className="text-gray-400 font-normal">(Optional)</span>
+                                            </label>
+                                            <Input
+                                                placeholder="名前を入力..."
+                                                className="rounded-lg border-gray-200 bg-gray-50 focus:bg-white h-10"
+                                                value={newComment.authorName}
+                                                onChange={(e) =>
+                                                    setNewComment({ ...newComment, authorName: e.target.value })
+                                                }
+                                            />
+                                        </div>
+
+                                        {/* Category & Status */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-semibold text-gray-700">
+                                                Category & Status
+                                            </label>
+                                            <div className="flex gap-2">
+                                                <select
+                                                    className={cn(
+                                                        "flex-1 h-9 text-sm font-semibold px-4 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-offset-0",
+                                                        newComment.category === "coding"
+                                                            ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                                                            : "bg-orange-100 text-orange-800 hover:bg-orange-200"
+                                                    )}
+                                                    value={newComment.category}
+                                                    onChange={(e) => setNewComment({ ...newComment, category: e.target.value as 'coding' | 'design' })}
+                                                >
+                                                    <option value="coding">コーディング</option>
+                                                    <option value="design">デザイン</option>
+                                                </select>
+                                                <select
+                                                    className={cn(
+                                                        "flex-1 h-9 text-sm font-semibold px-4 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-offset-0",
+                                                        newComment.status === "completed"
+                                                            ? "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                                                            : newComment.status === "in-progress"
+                                                                ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                                                                : "bg-red-100 text-red-800 hover:bg-red-200"
+                                                    )}
+                                                    value={newComment.status}
+                                                    onChange={(e) => setNewComment({ ...newComment, status: e.target.value as Comment['status'] })}
+                                                >
+                                                    <option value="pending">未対応</option>
+                                                    <option value="in-progress">対応中</option>
+                                                    <option value="completed">完了</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {/* Action Buttons */}
+                                        <div className="flex justify-end gap-2 pt-2">
+                                            <Button
+                                                variant="ghost"
+                                                size="default"
+                                                onClick={handleCancel}
+                                                className="h-9 px-4 text-gray-600 hover:text-gray-900"
+                                            >
                                                 Cancel
                                             </Button>
-                                            <Button variant="default" size="sm" onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white">
+                                            <Button
+                                                variant="default"
+                                                size="default"
+                                                onClick={handleSave}
+                                                className="h-9 px-5 bg-blue-600 hover:bg-blue-700 text-white shadow-sm rounded-lg"
+                                            >
                                                 Save
                                             </Button>
                                         </div>
