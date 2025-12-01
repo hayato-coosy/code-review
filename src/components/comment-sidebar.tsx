@@ -34,7 +34,7 @@ export function CommentSidebar({
 
     // Sidebar state
     const [width, setWidth] = useState(320);
-    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(true);
     const [isResizing, setIsResizing] = useState(false);
 
     // Edit state

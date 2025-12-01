@@ -216,12 +216,7 @@ export default function SessionPage({ params }: SessionPageProps) {
                     activeTab={activeTab}
                     onTabChange={handleTabChange}
                 />
-                {/* Debug Info - Temporary */}
-                <div className="absolute bottom-0 right-0 bg-black/80 text-white p-2 text-xs z-50 pointer-events-none">
-                    Session ID: {session.id.slice(0, 8)}<br />
-                    Has Desktop URL: {session.screenshotDesktopUrl ? 'Yes' : 'No'}<br />
-                    Has Mobile URL: {session.screenshotMobileUrl ? 'Yes' : 'No'}
-                </div>
+
             </div>
         </div>
     );

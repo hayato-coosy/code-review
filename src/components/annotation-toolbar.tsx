@@ -57,7 +57,7 @@ export function AnnotationToolbar({
     const mobileInputRef = useRef<HTMLInputElement>(null);
 
     return (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2">
             {/* Main Toolbar */}
             <div className="flex items-center p-1.5 bg-white/90 backdrop-blur-xl border border-gray-200/50 shadow-lg shadow-gray-200/20 rounded-2xl transition-all duration-300 hover:shadow-xl hover:border-gray-300/50">
 
