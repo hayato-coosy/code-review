@@ -629,13 +629,8 @@ export function AnnotationCanvas({
                     {/* Dark overlay when overlay mode is on */}
                     {isOverlayMode && (
                         <div
-                            className="absolute inset-0 w-full pointer-events-none z-10"
-                            style={{
-                                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                                height: isImageMode && screenshots[viewport || 'desktop']
-                                    ? `${screenshots[viewport || 'desktop']!.height}px`
-                                    : '100%'
-                            }}
+                            className="absolute inset-0 w-full h-full pointer-events-none z-10"
+                            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
                         />
                     )}
 
