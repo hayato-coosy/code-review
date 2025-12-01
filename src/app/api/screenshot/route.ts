@@ -38,43 +38,33 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Invalid URL format" }, { status: 400 });
         }
 
-        // Check for API key
-        const apiKey = process.env.SCREENSHOT_ONE_API_KEY;
-        if (!apiKey) {
-            return NextResponse.json(
-                { error: "Screenshot service not configured. Please set SCREENSHOT_ONE_API_KEY environment variable." },
-                { status: 500 }
-            );
-        }
-
         // Configure screenshot parameters
         const isMobile = viewport === 'mobile';
         const width = isMobile ? 375 : 1280;
         const height = isMobile ? 667 : 720;
 
-        // Build ScreenshotOne API URL
-        const screenshotApiUrl = new URL('https://api.screenshotone.com/take');
-        screenshotApiUrl.searchParams.set('access_key', apiKey);
-        screenshotApiUrl.searchParams.set('url', targetUrl);
-        screenshotApiUrl.searchParams.set('viewport_width', width.toString());
-        screenshotApiUrl.searchParams.set('viewport_height', height.toString());
-        screenshotApiUrl.searchParams.set('device_scale_factor', '2');
-        screenshotApiUrl.searchParams.set('format', 'jpg');
-        screenshotApiUrl.searchParams.set('image_quality', '100');
-        screenshotApiUrl.searchParams.set('full_page', 'true');
-        screenshotApiUrl.searchParams.set('block_cookie_banners', 'true');
-        screenshotApiUrl.searchParams.set('block_chats', 'true');
-        screenshotApiUrl.searchParams.set('time_zone', 'Asia/Shanghai');
-        screenshotApiUrl.searchParams.set('headers', 'Accept-Language:ja');
+        // Build Microlink API URL
+        const microlinkApiUrl = new URL('https://api.microlink.io');
+        microlinkApiUrl.searchParams.set('url', targetUrl);
+        microlinkApiUrl.searchParams.set('screenshot', 'true');
+        microlinkApiUrl.searchParams.set('meta', 'false');
+        microlinkApiUrl.searchParams.set('embed', 'screenshot.url');
+        microlinkApiUrl.searchParams.set('viewport.width', width.toString());
+        microlinkApiUrl.searchParams.set('viewport.height', height.toString());
+        microlinkApiUrl.searchParams.set('viewport.deviceScaleFactor', '2');
+        microlinkApiUrl.searchParams.set('fullPage', 'true');
+        microlinkApiUrl.searchParams.set('headers.Accept-Language', 'ja');
+        // Microlink doesn't support time_zone directly in free tier easily without overlay, 
+        // but Accept-Language is key for fonts.
 
-        // Call ScreenshotOne API
-        const screenshotResponse = await fetch(screenshotApiUrl.toString(), {
+        // Call Microlink API
+        const screenshotResponse = await fetch(microlinkApiUrl.toString(), {
             method: 'GET',
         });
 
         if (!screenshotResponse.ok) {
             const errorText = await screenshotResponse.text();
-            console.error("ScreenshotOne API error:", errorText);
+            console.error("Microlink API error:", errorText);
             return NextResponse.json(
                 { error: "Failed to capture screenshot", details: errorText },
                 { status: screenshotResponse.status }
@@ -85,7 +75,7 @@ export async function POST(request: NextRequest) {
         const imageBuffer = await screenshotResponse.arrayBuffer();
         const base64Image = `data:image/jpeg;base64,${Buffer.from(imageBuffer).toString('base64')}`;
 
-        // Assume iframe is allowed (we can't easily check headers from this API)
+        // Assume iframe is allowed
         const isIframeAllowed = true;
 
         return NextResponse.json({
