@@ -127,6 +127,23 @@ export default function SessionPage({ params }: SessionPageProps) {
         }
     };
 
+    const handleUpdateSession = async (updates: { screenshotDesktopUrl?: string; screenshotMobileUrl?: string }) => {
+        if (!id || !session) return;
+
+        // Optimistic update
+        setSession({ ...session, ...updates });
+
+        try {
+            await fetch(`/api/sessions/${id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updates),
+            });
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
     const handleCommentClick = (comment: Comment) => {
         // Scroll to the comment's position
         const scrollContainer = document.querySelector('.flex-1.overflow-auto');
@@ -181,6 +198,9 @@ export default function SessionPage({ params }: SessionPageProps) {
                         onToggleOverlay={() => setIsOverlayMode(!isOverlayMode)}
                         canvasHeight={session.canvasHeight}
                         onCanvasHeightChange={handleCanvasHeightChange}
+                        screenshotDesktopUrl={session.screenshotDesktopUrl}
+                        screenshotMobileUrl={session.screenshotMobileUrl}
+                        onUpdateSession={handleUpdateSession}
                     />
                 </div>
             </div>

@@ -40,12 +40,16 @@ export const store = {
                 targetUrl: data.target_url,
                 createdAt: data.created_at,
                 canvasHeight: data.canvas_height,
+                screenshotDesktopUrl: data.screenshot_desktop_url,
+                screenshotMobileUrl: data.screenshot_mobile_url,
             };
         },
         update: async (id: string, updates: Partial<Session>): Promise<Session | null> => {
             const updateData: any = {};
             if (updates.canvasHeight !== undefined) updateData.canvas_height = updates.canvasHeight;
             if (updates.targetUrl !== undefined) updateData.target_url = updates.targetUrl;
+            if (updates.screenshotDesktopUrl !== undefined) updateData.screenshot_desktop_url = updates.screenshotDesktopUrl;
+            if (updates.screenshotMobileUrl !== undefined) updateData.screenshot_mobile_url = updates.screenshotMobileUrl;
 
             const { error } = await supabase
                 .from('sessions')

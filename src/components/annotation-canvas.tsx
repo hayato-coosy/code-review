@@ -22,6 +22,9 @@ interface AnnotationCanvasProps {
     onToggleOverlay?: () => void;
     canvasHeight?: number;
     onCanvasHeightChange?: (height: number) => void;
+    screenshotDesktopUrl?: string | null;
+    screenshotMobileUrl?: string | null;
+    onUpdateSession?: (updates: { screenshotDesktopUrl?: string; screenshotMobileUrl?: string }) => Promise<void>;
 }
 
 export function AnnotationCanvas({
@@ -37,13 +40,19 @@ export function AnnotationCanvas({
     onToggleOverlay,
     canvasHeight,
     onCanvasHeightChange,
+    screenshotDesktopUrl,
+    screenshotMobileUrl,
+    onUpdateSession,
 }: AnnotationCanvasProps) {
     // Screenshot state
-    const [isImageMode, setIsImageMode] = useState(false);
+    const [isImageMode, setIsImageMode] = useState(!!(screenshotDesktopUrl || screenshotMobileUrl));
     const [screenshots, setScreenshots] = useState<{
         desktop: { url: string; height: number } | null;
         mobile: { url: string; height: number } | null;
-    }>({ desktop: null, mobile: null });
+    }>({
+        desktop: screenshotDesktopUrl ? { url: screenshotDesktopUrl, height: 0 } : null, // Height will be updated on load or is not critical for display if we use 100%
+        mobile: screenshotMobileUrl ? { url: screenshotMobileUrl, height: 0 } : null
+    });
     const [isTakingScreenshot, setIsTakingScreenshot] = useState(false);
 
     const handleTakeScreenshot = async () => {
@@ -67,9 +76,43 @@ export function AnnotationCanvas({
             const desktopData = await desktopRes.json();
             const mobileData = await mobileRes.json();
 
+            // Upload screenshots to Supabase
+            const [desktopUploadRes, mobileUploadRes] = await Promise.all([
+                fetch('/api/screenshot/upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: desktopData.screenshot, folder: 'desktop' })
+                }),
+                fetch('/api/screenshot/upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: mobileData.screenshot, folder: 'mobile' })
+                })
+            ]);
+
+            let desktopUrl = desktopData.screenshot;
+            let mobileUrl = mobileData.screenshot;
+
+            if (desktopUploadRes.ok && mobileUploadRes.ok) {
+                const desktopUploadData = await desktopUploadRes.json();
+                const mobileUploadData = await mobileUploadRes.json();
+                desktopUrl = desktopUploadData.url;
+                mobileUrl = mobileUploadData.url;
+
+                // Update session with public URLs
+                if (onUpdateSession) {
+                    await onUpdateSession({
+                        screenshotDesktopUrl: desktopUrl,
+                        screenshotMobileUrl: mobileUrl
+                    });
+                }
+            } else {
+                console.error('Failed to upload screenshots to storage');
+            }
+
             setScreenshots({
-                desktop: { url: desktopData.screenshot, height: desktopData.height },
-                mobile: { url: mobileData.screenshot, height: mobileData.height }
+                desktop: { url: desktopUrl, height: desktopData.height },
+                mobile: { url: mobileUrl, height: mobileData.height }
             });
             setIsImageMode(true);
 

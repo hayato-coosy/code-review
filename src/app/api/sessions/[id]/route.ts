@@ -22,9 +22,13 @@ export async function PATCH(
     const { id } = await params;
     try {
         const body = await request.json();
-        const { canvasHeight } = body;
+        const { canvasHeight, screenshotDesktopUrl, screenshotMobileUrl } = body;
 
-        const updated = await store.sessions.update(id, { canvasHeight });
+        const updated = await store.sessions.update(id, {
+            canvasHeight,
+            screenshotDesktopUrl,
+            screenshotMobileUrl
+        });
         if (!updated) {
             return NextResponse.json({ error: "Session not found" }, { status: 404 });
         }

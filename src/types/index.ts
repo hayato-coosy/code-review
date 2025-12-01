@@ -3,6 +3,8 @@ export interface Session {
     targetUrl: string;
     createdAt: string;
     canvasHeight?: number;
+    screenshotDesktopUrl?: string | null;
+    screenshotMobileUrl?: string | null;
 };
 
 export type Comment = {
