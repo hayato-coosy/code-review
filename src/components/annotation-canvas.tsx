@@ -604,12 +604,63 @@ export function AnnotationCanvas({
     const desktopFileInputRef = useRef<HTMLInputElement>(null);
     const mobileFileInputRef = useRef<HTMLInputElement>(null);
 
+    const compressImage = async (file: File, maxWidth = 3840, quality = 0.85): Promise<Blob> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    // Resize if too large
+                    if (width > maxWidth) {
+                        height = (height * maxWidth) / width;
+                        width = maxWidth;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) {
+                        reject(new Error('Failed to get canvas context'));
+                        return;
+                    }
+
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob(
+                        (blob) => {
+                            if (blob) {
+                                resolve(blob);
+                            } else {
+                                reject(new Error('Failed to compress image'));
+                            }
+                        },
+                        file.type.includes('png') ? 'image/png' : 'image/jpeg',
+                        quality
+                    );
+                };
+                img.onerror = () => reject(new Error('Failed to load image'));
+                img.src = e.target?.result as string;
+            };
+            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.readAsDataURL(file);
+        });
+    };
+
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, folder: 'desktop' | 'mobile') => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         setIsTakingScreenshot(true);
         try {
+            // Compress image before upload
+            console.log('Original file size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
+            const compressedBlob = await compressImage(file);
+            console.log('Compressed file size:', (compressedBlob.size / 1024 / 1024).toFixed(2), 'MB');
+
             // Get Signed Upload URL
             const setupRes = await fetch('/api/screenshot/upload', {
                 method: 'POST',
@@ -624,7 +675,7 @@ export function AnnotationCanvas({
             const uploadRes = await fetch(setupData.signedUrl, {
                 method: 'PUT',
                 headers: { 'Content-Type': file.type },
-                body: file
+                body: compressedBlob
             });
 
             if (!uploadRes.ok) {
