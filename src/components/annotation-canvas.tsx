@@ -125,6 +125,7 @@ export function AnnotationCanvas({
             const desktopBlob = base64ToBlob(desktopData.screenshot);
             const mobileBlob = base64ToBlob(mobileData.screenshot);
 
+            // Upload screenshots to Supabase
             const [desktopUploadRes, mobileUploadRes] = await Promise.all([
                 fetch(desktopSetup.signedUrl, {
                     method: 'PUT',
