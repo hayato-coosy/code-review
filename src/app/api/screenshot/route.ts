@@ -65,10 +65,6 @@ export async function POST(request: NextRequest) {
         screenshotApiUrl.searchParams.set('block_cookie_banners', 'true');
         screenshotApiUrl.searchParams.set('block_chats', 'true');
 
-        if (isMobile) {
-            screenshotApiUrl.searchParams.set('device_type', 'mobile');
-        }
-
         // Call ScreenshotOne API
         const screenshotResponse = await fetch(screenshotApiUrl.toString(), {
             method: 'GET',
