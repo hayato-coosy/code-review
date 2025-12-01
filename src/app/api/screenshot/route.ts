@@ -109,10 +109,10 @@ export async function POST(request: NextRequest) {
         }
 
         // Wait for fonts to be ready
-        await page.evaluate(() => document.fonts.ready);
+        // await page.evaluate(() => document.fonts.ready);
 
         // Additional wait for dynamic content
-        await new Promise(r => setTimeout(r, 2000));
+        // await new Promise(r => setTimeout(r, 2000));
 
         // Check headers for iframe compatibility
         const headers = response.headers();
