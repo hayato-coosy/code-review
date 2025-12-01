@@ -48,7 +48,6 @@ export async function POST(request: NextRequest) {
             if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_VERSION) {
                 // Production (Vercel/Lambda)
                 // Configure sparticuz/chromium
-                chromium.setGraphicsMode = false;
 
                 browser = await puppeteerCore.launch({
                     args: [...chromium.args, '--hide-scrollbars', '--disable-web-security', '--ignore-certificate-errors'],
@@ -68,7 +67,11 @@ export async function POST(request: NextRequest) {
         } catch (launchError: any) {
             console.error("Browser launch failed:", launchError);
             return NextResponse.json(
-                { error: "Failed to initialize browser", details: launchError.message },
+                {
+                    error: "Failed to initialize browser",
+                    details: launchError.message,
+                    stack: launchError.stack
+                },
                 { status: 500 }
             );
         }
