@@ -384,9 +384,9 @@ export function AnnotationCanvas({
         const { startX, startY, initialCommentX, initialCommentY, overlayRect } = dragInfoRef.current;
         const { clientX, clientY } = getClientCoordinates(e);
 
-        // Calculate delta in percentage relative to overlay size
-        const deltaX = (clientX - startX) / overlayRect.width;
-        const deltaY = (clientY - startY) / overlayRect.height;
+        // Calculate delta
+        const deltaX = (clientX - startX) / overlayRect.width; // X is still percentage
+        const deltaY = clientY - startY; // Y is pixels
 
         const newX = initialCommentX + deltaX;
         const newY = initialCommentY + deltaY;
@@ -399,7 +399,7 @@ export function AnnotationCanvas({
         const el = document.getElementById(`comment-${movingCommentId}`);
         if (el) {
             el.style.left = `${newX * 100}%`;
-            el.style.top = `${newY * 100}%`;
+            el.style.top = `${newY}px`;
         }
     };
 
@@ -522,7 +522,7 @@ export function AnnotationCanvas({
             category: newComment.category as Comment["category"],
             status: newComment.status as Comment["status"],
             posX: tempPin.x,
-            posY: tempPin.y,
+            posY: tempPin.y * currentHeight, // Save as pixels
             width: tempPin.width,
             height: tempPin.height,
             isCompleted: false,
@@ -855,7 +855,7 @@ export function AnnotationCanvas({
                                             )}
                                             style={{
                                                 left: `${posX * 100}%`,
-                                                top: `${posY * 100}%`,
+                                                top: posY > 1 ? `${posY}px` : `${posY * 100}%`, // Handle both px and %
                                                 width: `${width * 100}%`,
                                                 height: `${height * 100}%`,
                                                 borderColor: statusColor,

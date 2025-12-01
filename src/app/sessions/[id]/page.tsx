@@ -112,37 +112,15 @@ export default function SessionPage({ params }: SessionPageProps) {
     const handleCanvasHeightChange = async (height: number) => {
         if (!id || !session) return;
 
-        const oldHeight = session.canvasHeight || 800;
-        const newHeight = height;
-        const scaleFactor = oldHeight / newHeight;
-
-        // Optimistic update session
+        // Optimistic update
         setSession({ ...session, canvasHeight: height });
 
-        // Optimistic update comments
-        const updatedComments = comments.map(c => ({
-            ...c,
-            posY: c.posY * scaleFactor
-        }));
-        setComments(updatedComments);
-
         try {
-            // Save session height
             await fetch(`/api/sessions/${id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ canvasHeight: height }),
             });
-
-            // Save all updated comments
-            // Note: In a production app, we should use a bulk update endpoint
-            await Promise.all(updatedComments.map(c =>
-                fetch(`/api/sessions/${id}/comments`, {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ commentId: c.id, posY: c.posY }),
-                })
-            ));
         } catch (error) {
             console.error(error);
             // Revert on error if needed
@@ -170,8 +148,10 @@ export default function SessionPage({ params }: SessionPageProps) {
         // Scroll to the comment's position
         const scrollContainer = document.querySelector('.flex-1.overflow-auto');
         if (scrollContainer) {
-            const height = session?.canvasHeight || 3000;
-            const scrollPosition = comment.posY * height;
+            const height = session?.canvasHeight || 800;
+            // Handle both pixels (posY > 1) and percentage (posY <= 1)
+            const scrollPosition = comment.posY > 1 ? comment.posY : comment.posY * height;
+
             scrollContainer.scrollTo({
                 top: scrollPosition - 100, // Offset by 100px to show context above
                 behavior: 'smooth'
