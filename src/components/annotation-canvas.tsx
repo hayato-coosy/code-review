@@ -627,7 +627,16 @@ export function AnnotationCanvas({
                 body: file
             });
 
-            if (!uploadRes.ok) throw new Error('Failed to upload file');
+            if (!uploadRes.ok) {
+                const errorText = await uploadRes.text();
+                console.error('Upload failed:', {
+                    status: uploadRes.status,
+                    statusText: uploadRes.statusText,
+                    error: errorText,
+                    url: setupData.signedUrl
+                });
+                throw new Error(`Failed to upload file: ${uploadRes.status} ${errorText}`);
+            }
 
             const publicUrl = setupData.publicUrl;
 
