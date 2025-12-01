@@ -614,7 +614,7 @@ export function AnnotationCanvas({
             const setupRes = await fetch('/api/screenshot/upload', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ folder })
+                body: JSON.stringify({ folder, fileType: file.type })
             });
 
             if (!setupRes.ok) throw new Error('Failed to get upload URL');

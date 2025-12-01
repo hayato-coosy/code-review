@@ -8,16 +8,21 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { folder = 'misc' } = body;
+        const { folder = 'misc', fileType = 'image/jpeg' } = body;
+
+        // Determine file extension from MIME type
+        const extension = fileType.includes('png') ? 'png' : 'jpg';
 
         // Generate unique filename
-        const filename = `${folder}/${uuidv4()}.jpg`;
+        const filename = `${folder}/${uuidv4()}.${extension}`;
 
-        // Create Signed Upload URL
+        // Create Signed Upload URL with upsert option
         const { data: signedData, error: signedError } = await supabase
             .storage
             .from('screenshots')
-            .createSignedUploadUrl(filename);
+            .createSignedUploadUrl(filename, {
+                upsert: true
+            });
 
         if (signedError) {
             console.error("Supabase signed url error:", signedError);
@@ -36,7 +41,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             signedUrl: signedData.signedUrl,
             publicUrl: publicUrlData.publicUrl,
-            path: filename
+            path: filename,
+            token: signedData.token
         });
 
     } catch (error: any) {
