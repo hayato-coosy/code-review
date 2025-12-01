@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
         // Configure screenshot parameters
         const isMobile = viewport === 'mobile';
         const width = isMobile ? 375 : 1280;
-        const height = 3000;
+        const height = isMobile ? 667 : 720;
 
         // Build ScreenshotOne API URL
         const screenshotApiUrl = new URL('https://api.screenshotone.com/take');
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
         screenshotApiUrl.searchParams.set('viewport_height', height.toString());
         screenshotApiUrl.searchParams.set('device_scale_factor', '2');
         screenshotApiUrl.searchParams.set('format', 'jpg');
-        screenshotApiUrl.searchParams.set('image_quality', '60');
+        screenshotApiUrl.searchParams.set('image_quality', '100');
         screenshotApiUrl.searchParams.set('full_page', 'true');
         screenshotApiUrl.searchParams.set('block_cookie_banners', 'true');
         screenshotApiUrl.searchParams.set('block_chats', 'true');
