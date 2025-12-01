@@ -651,14 +651,21 @@ export function AnnotationCanvas({
                         "relative mx-auto bg-white shadow-2xl transition-all duration-300 ease-in-out",
                         viewport === "mobile" ? "w-[375px]" : "w-[1280px]"
                     )}
-                    style={{ height: `${currentHeight}px` }}
+                    style={{ height: isImageMode ? 'auto' : `${currentHeight}px`, minHeight: isImageMode ? '100%' : undefined }}
                 >
                     {isImageMode && (viewport === 'mobile' ? screenshots.mobile : screenshots.desktop) ? (
                         <img
                             src={(viewport === 'mobile' ? screenshots.mobile : screenshots.desktop)?.url}
                             alt="Site Screenshot"
-                            className="absolute inset-0 w-full h-auto object-contain"
-                            style={{ minHeight: '100%' }}
+                            className="relative w-full h-auto block"
+                            onLoad={(e) => {
+                                const img = e.currentTarget;
+                                // Update height to match rendered image height
+                                if (onCanvasHeightChange) {
+                                    // Use offsetHeight to get the rendered height
+                                    onCanvasHeightChange(img.offsetHeight);
+                                }
+                            }}
                         />
                     ) : (
                         <iframe
