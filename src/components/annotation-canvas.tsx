@@ -601,6 +601,62 @@ export function AnnotationCanvas({
         };
     };
 
+    const desktopFileInputRef = useRef<HTMLInputElement>(null);
+    const mobileFileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, folder: 'desktop' | 'mobile') => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsTakingScreenshot(true);
+        try {
+            // Get Signed Upload URL
+            const setupRes = await fetch('/api/screenshot/upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ folder })
+            });
+
+            if (!setupRes.ok) throw new Error('Failed to get upload URL');
+            const setupData = await setupRes.json();
+
+            // Upload to Supabase
+            const uploadRes = await fetch(setupData.signedUrl, {
+                method: 'PUT',
+                headers: { 'Content-Type': file.type },
+                body: file
+            });
+
+            if (!uploadRes.ok) throw new Error('Failed to upload file');
+
+            const publicUrl = setupData.publicUrl;
+
+            // Update session
+            if (onUpdateSession) {
+                await onUpdateSession({
+                    [folder === 'desktop' ? 'screenshotDesktopUrl' : 'screenshotMobileUrl']: publicUrl
+                });
+            }
+
+            // Update local state
+            setScreenshots(prev => ({
+                ...prev,
+                [folder]: { url: publicUrl, height: 0 }
+            }));
+            setIsImageMode(true);
+            if (onViewportChange) {
+                onViewportChange(folder);
+            }
+
+        } catch (error) {
+            console.error('Upload error:', error);
+            alert('画像のアップロードに失敗しました。');
+        } finally {
+            setIsTakingScreenshot(false);
+            if (e.target) e.target.value = '';
+        }
+    };
+
     const currentHeight = canvasHeight || 3000;
 
     return (
@@ -637,6 +693,41 @@ export function AnnotationCanvas({
                             <span className="text-lg">📷</span>
                         )}
                         {isImageMode ? "画像モード: ON" : "画像モード: OFF"}
+                    </Button>
+
+                    <input
+                        type="file"
+                        ref={desktopFileInputRef}
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) => handleFileUpload(e, 'desktop')}
+                    />
+                    <input
+                        type="file"
+                        ref={mobileFileInputRef}
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) => handleFileUpload(e, 'mobile')}
+                    />
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => desktopFileInputRef.current?.click()}
+                        disabled={isTakingScreenshot}
+                        className="gap-1 text-xs"
+                        title="Upload Desktop Screenshot"
+                    >
+                        📤 PC
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => mobileFileInputRef.current?.click()}
+                        disabled={isTakingScreenshot}
+                        className="gap-1 text-xs"
+                        title="Upload Mobile Screenshot"
+                    >
+                        📤 SP
                     </Button>
 
                     <span className="text-sm text-muted-foreground">
