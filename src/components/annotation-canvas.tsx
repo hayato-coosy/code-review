@@ -89,32 +89,61 @@ export function AnnotationCanvas({
 
             // alert('スクリーンショット取得完了。アップロードを開始します...');
 
-            // Upload screenshots to Supabase
-            const [desktopUploadRes, mobileUploadRes] = await Promise.all([
+            // Helper to convert base64 to blob
+            const base64ToBlob = (base64: string, type: string = 'image/jpeg') => {
+                const binStr = atob(base64.replace(/^data:image\/\w+;base64,/, ""));
+                const len = binStr.length;
+                const arr = new Uint8Array(len);
+                for (let i = 0; i < len; i++) {
+                    arr[i] = binStr.charCodeAt(i);
+                }
+                return new Blob([arr], { type });
+            };
+
+            // Get Upload URLs
+            const [desktopUploadSetupRes, mobileUploadSetupRes] = await Promise.all([
                 fetch('/api/screenshot/upload', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ image: desktopData.screenshot, folder: 'desktop' })
+                    body: JSON.stringify({ folder: 'desktop' })
                 }),
                 fetch('/api/screenshot/upload', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ image: mobileData.screenshot, folder: 'mobile' })
+                    body: JSON.stringify({ folder: 'mobile' })
                 })
             ]);
 
-            // alert(`アップロード完了: Desktop=${desktopUploadRes.status}, Mobile=${mobileUploadRes.status}`);
+            if (!desktopUploadSetupRes.ok || !mobileUploadSetupRes.ok) {
+                throw new Error('Failed to get upload URLs');
+            }
+
+            const desktopSetup = await desktopUploadSetupRes.json();
+            const mobileSetup = await mobileUploadSetupRes.json();
+
+            // Upload directly to Supabase
+            const desktopBlob = base64ToBlob(desktopData.screenshot);
+            const mobileBlob = base64ToBlob(mobileData.screenshot);
+
+            const [desktopUploadRes, mobileUploadRes] = await Promise.all([
+                fetch(desktopSetup.signedUrl, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'image/jpeg' },
+                    body: desktopBlob
+                }),
+                fetch(mobileSetup.signedUrl, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'image/jpeg' },
+                    body: mobileBlob
+                })
+            ]);
 
             let desktopUrl = desktopData.screenshot;
             let mobileUrl = mobileData.screenshot;
 
             if (desktopUploadRes.ok && mobileUploadRes.ok) {
-                const desktopUploadData = await desktopUploadRes.json();
-                const mobileUploadData = await mobileUploadRes.json();
-                desktopUrl = desktopUploadData.url;
-                mobileUrl = mobileUploadData.url;
-
-                // alert(`URL取得: ${desktopUrl?.slice(0, 20)}...`);
+                desktopUrl = desktopSetup.publicUrl;
+                mobileUrl = mobileSetup.publicUrl;
 
                 // Update session with public URLs
                 if (onUpdateSession) {
@@ -122,12 +151,10 @@ export function AnnotationCanvas({
                         screenshotDesktopUrl: desktopUrl,
                         screenshotMobileUrl: mobileUrl
                     });
-                    // alert('セッション更新リクエスト送信完了');
                 }
             } else {
                 console.error('Failed to upload screenshots to storage');
-                const errorText = await desktopUploadRes.text();
-                alert(`画像の保存に失敗しました: ${desktopUploadRes.status} ${errorText}`);
+                alert(`画像の保存に失敗しました: Upload failed`);
             }
 
             setScreenshots({
