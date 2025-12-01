@@ -58,10 +58,10 @@ export async function POST(request: NextRequest) {
         screenshotApiUrl.searchParams.set('url', targetUrl);
         screenshotApiUrl.searchParams.set('viewport_width', width.toString());
         screenshotApiUrl.searchParams.set('viewport_height', height.toString());
-        screenshotApiUrl.searchParams.set('device_scale_factor', '1');
+        screenshotApiUrl.searchParams.set('device_scale_factor', '2');
         screenshotApiUrl.searchParams.set('format', 'jpg');
         screenshotApiUrl.searchParams.set('image_quality', '60');
-        screenshotApiUrl.searchParams.set('full_page', 'false');
+        screenshotApiUrl.searchParams.set('full_page', 'true');
         screenshotApiUrl.searchParams.set('block_cookie_banners', 'true');
         screenshotApiUrl.searchParams.set('block_chats', 'true');
         screenshotApiUrl.searchParams.set('time_zone', 'Asia/Shanghai');
