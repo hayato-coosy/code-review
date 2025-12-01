@@ -88,8 +88,8 @@ export async function POST(request: NextRequest) {
 
         // Navigate to URL
         const response = await page.goto(targetUrl, {
-            waitUntil: 'networkidle0',
-            timeout: 60000
+            waitUntil: 'domcontentloaded',
+            timeout: 30000
         });
 
         if (!response) {
